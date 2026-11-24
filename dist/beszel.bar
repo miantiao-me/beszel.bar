@@ -1,0 +1,4192 @@
+<bar protocol-version="0" min-app-version="0.3.0" id="beszel" title="Beszel" version="0.2.0" description="Monitor your self-hosted Beszel servers, containers, and alerts." icon="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%222%22%20d%3D%22M3%207a3%203%200%200%201%203-3h12a3%203%200%200%201%203%203v2a3%203%200%200%201-3%203H6a3%203%200%200%201-3-3zm0%208a3%203%200%200%201%203-3h12a3%203%200%200%201%203%203v2a3%203%200%200%201-3%203H6a3%203%200%200%201-3-3zm4-7v.01M7%2016v.01%22%2F%3E%3C%2Fsvg%3E" category="monitor" refresh="1m" material="solid" open-mode="flyout" window-style="standard" widget="true" notch="true" homepage="https://github.com/miantiao-me/beszel.bar" license="Apache-2.0">
+  <locale lang="zh-Hans" title="Beszel" description="监控自建 Beszel 主机、容器与告警。" />
+  <permissions>
+    <network origin="{{ inputs.server }}" from-url="true" allow-http="true" />
+    <inbox access="manage" />
+  </permissions>
+  <inputs>
+    <input name="lang" type="select" label="Language" default="auto">
+      <locale lang="zh-Hans" label="语言" />
+      <option value="auto" label="Auto (System)"><locale lang="zh-Hans" label="跟随系统" /></option>
+      <option value="en" label="English" />
+      <option value="zh" label="简体中文" />
+    </input>
+    <input name="server" type="string" label="Server URL" default="http://127.0.0.1:8090" placeholder="https://beszel.example.com" help="Your Beszel URL. Local HTTP is supported." required="true">
+      <locale lang="zh-Hans" label="服务器地址" help="Beszel 地址，支持内网 HTTP。" />
+    </input>
+    <input name="email" type="secret" label="Email" help="Account email. A read-only user is recommended." required="true">
+      <locale lang="zh-Hans" label="邮箱" help="登录邮箱，建议使用只读账号。" />
+    </input>
+    <input name="password" type="secret" label="Password" required="true">
+      <locale lang="zh-Hans" label="密码" />
+    </input>
+    <input name="refreshInterval" type="select" label="Refresh Interval" default="30" help="How often to refresh data.">
+      <locale lang="zh-Hans" label="刷新间隔" help="数据刷新频率。" />
+      <option value="15" label="15s"><locale lang="zh-Hans" label="15 秒" /></option>
+      <option value="30" label="30s"><locale lang="zh-Hans" label="30 秒" /></option>
+      <option value="60" label="60s"><locale lang="zh-Hans" label="60 秒" /></option>
+    </input>
+    <input name="trayFormat" type="select" label="Menu Bar" default="online" help="What to show in the menu bar.">
+      <locale lang="zh-Hans" label="菜单栏显示" help="菜单栏显示的内容。" />
+      <option value="online" label="Online (4/5)"><locale lang="zh-Hans" label="在线数 (4/5)" /></option>
+      <option value="online_rate" label="Online + Bandwidth"><locale lang="zh-Hans" label="在线数与带宽" /></option>
+      <option value="cpu" label="Average CPU"><locale lang="zh-Hans" label="平均 CPU" /></option>
+      <option value="rate_spark" label="Bandwidth Sparkline (macOS)"><locale lang="zh-Hans" label="带宽迷你图 (macOS)" /></option>
+      <option value="cpu_spark" label="CPU Sparkline (macOS)"><locale lang="zh-Hans" label="CPU 迷你图 (macOS)" /></option>
+    </input>
+    <input name="notchMetric" type="select" label="Notch Metric" default="online" help="Metric shown in the screen notch (Plus).">
+      <locale lang="zh-Hans" label="刘海屏指标" help="刘海屏显示的数值（Plus）。" />
+      <option value="online" label="Online (4/5)"><locale lang="zh-Hans" label="在线数 (4/5)" /></option>
+      <option value="cpu" label="Average CPU (48%)"><locale lang="zh-Hans" label="平均 CPU (48%)" /></option>
+      <option value="rate" label="Bandwidth (14.6M)"><locale lang="zh-Hans" label="实时带宽 (14.6M)" /></option>
+    </input>
+    <input name="widgetMode" type="select" label="Desktop Widget" default="overview" help="What desktop widgets display.">
+      <locale lang="zh-Hans" label="桌面小组件" help="桌面小组件显示的内容。" />
+      <option value="overview" label="Overview"><locale lang="zh-Hans" label="集群总览" /></option>
+      <option value="system" label="Single Server"><locale lang="zh-Hans" label="单台主机" /></option>
+      <option value="alerts" label="Alerts"><locale lang="zh-Hans" label="告警" /></option>
+    </input>
+    <input name="widgetSystem" type="string" label="Widget Server" help="Single Server widget only. Leave blank to follow the selected server.">
+      <locale lang="zh-Hans" label="小组件主机" help="仅单台主机小组件生效，留空跟随当前选中主机。" />
+    </input>
+    <input name="notify" type="bool" label="Notifications" default="false" help="Notify on outages, high load, or new alert messages.">
+      <locale lang="zh-Hans" label="桌面通知" help="主机离线、超阈或收到告警消息时提醒。" />
+    </input>
+    <input name="threshold" type="integer" label="Alert Threshold %" default="90" help="Alert when CPU, memory, or disk reaches this value (0 to disable).">
+      <locale lang="zh-Hans" label="告警阈值 %" help="资源达到该百分比时提醒，0 为关闭。" />
+    </input>
+  </inputs>
+  <docs><![CDATA[Monitor your self-hosted Beszel servers in read-only mode.
+
+Quick Start
+1. Enter your Beszel URL (e.g. https://beszel.example.com or http://10.0.0.2:8090).
+2. Enter your email and password (a read-only account is recommended).
+
+Optional: Alert Messages (Metrix.Bar Plus)
+1. Create an Inbox in Metrix.Bar and bind it to this dashboard with manage access.
+2. In Beszel Settings > Notifications, add a Webhook using your Inbox URL with the generic:// scheme:
+   generic://agili-inbox.com/h/<inbox-id>/<secret>
+   (Append ?template=json if preferred, or send to <inbox-id>@agili-inbox.com if SMTP is configured.)]]>
+    <locale lang="zh-Hans"><![CDATA[以只读方式监控自建 Beszel 主机、容器与告警。
+
+快速开始
+1. 填写 Beszel 地址（如 https://beszel.example.com 或内网 http://10.0.0.2:8090）。
+2. 填写登录邮箱与密码（建议使用只读账号）。
+
+可选：接收告警推送（Metrix.Bar Plus）
+1. 在 Metrix.Bar 中创建收件箱并绑定到此看板（开启管理权限以便删除消息）。
+2. 在 Beszel「设置 → 通知」中添加 Webhook，将收件箱 Webhook 地址的 https:// 改为 generic://：
+   generic://agili-inbox.com/h/<inbox-id>/<secret>
+   （如需 JSON 格式可追加 ?template=json；如已配置 SMTP 也可直接填 <inbox-id>@agili-inbox.com。）]]></locale>
+  </docs>
+  <script apis="intl shell localStorage notification clipboard match-media"><![CDATA[/*!
+Icon `tabler:server` from Tabler Icons · MIT
+https://github.com/tabler/tabler-icons/blob/main/LICENSE
+
+MIT License
+
+Copyright (c) 2020-2026 Paweł Kuna
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+UI icons from Remix Icon, published in @iconify-json/ri 1.2.10 under Apache-2.0.
+https://github.com/cyberalien/RemixIcon/blob/master/License
+
+destr 2.0.5 · MIT
+
+MIT License
+
+Copyright (c) Pooya Parsa <pooya@pi0.io>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+es-toolkit 1.53.1 · MIT
+
+MIT License
+
+Copyright (c) 2024 Viva Republica, Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+es-toolkit
+
+Parts of the test suite and compatibility layer in es-toolkit/compat are
+derived from Lodash (https://github.com/lodash/lodash).
+
+Lodash copyright notice and MIT permission notice:
+
+Copyright OpenJS Foundation and other contributors <https://openjsf.org/>
+
+Based on Underscore.js, copyright Jeremy Ashkenas,
+DocumentCloud and Investigative Reporters & Editors <http://underscorejs.org/>
+
+This software consists of voluntary contributions made by many
+individuals. For exact contribution history, see the revision history
+available at https://github.com/lodash/lodash
+
+The following license applies to all parts of this software except as
+documented below:
+
+====
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+pretty-bytes 7.2.0 · MIT
+
+MIT License
+
+Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+ufo 1.6.4 · MIT
+
+MIT License
+
+Copyright (c) Pooya Parsa <pooya@pi0.io>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+vue 3.5.46 · MIT
+
+The MIT License (MIT)
+
+Copyright (c) 2018-present, Yuxi (Evan) You
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+// node_modules/.pnpm/@vue+shared@3.5.46/node_modules/@vue/shared/dist/shared.esm-bundler.js
+// @__NO_SIDE_EFFECTS__
+function e(e) {
+	let t = /* @__PURE__ */ Object.create(null);
+	for (let n of e.split(",")) t[n] = 1;
+	return (e) => e in t;
+}
+var t = {}, n = () => {}, r = (e) => e.charCodeAt(0) === 111 && e.charCodeAt(1) === 110 && (e.charCodeAt(2) > 122 || e.charCodeAt(2) < 97), i = (e) => e.startsWith("onUpdate:"), a = Object.assign, o = (e, t) => {
+	let n = e.indexOf(t);
+	n > -1 && e.splice(n, 1);
+}, s = Object.prototype.hasOwnProperty, c = (e, t) => s.call(e, t), l = Array.isArray, u = (e) => v(e) === "[object Map]", d = (e) => v(e) === "[object Set]", f = (e) => typeof e == "function", p = (e) => typeof e == "string", m = (e) => typeof e == "symbol", h = (e) => typeof e == "object" && !!e, g = (e) => (h(e) || f(e)) && f(e.then) && f(e.catch), _ = Object.prototype.toString, v = (e) => _.call(e), y = (e) => v(e).slice(8, -1), b = (e) => v(e) === "[object Object]", ee = (e) => p(e) && e !== "NaN" && e[0] !== "-" && "" + parseInt(e, 10) === e, x = (e, t) => !Object.is(e, t), S, C = () => S ||= typeof globalThis < "u" ? globalThis : typeof self < "u" ? self : typeof window < "u" ? window : typeof global < "u" ? global : {};
+function w(e) {
+	if (l(e)) {
+		let t = {};
+		for (let n = 0; n < e.length; n++) {
+			let r = e[n], i = p(r) ? re(r) : w(r);
+			if (i) for (let e in i) t[e] = i[e];
+		}
+		return t;
+	}
+	if (p(e) || h(e)) return e;
+}
+var T = /;(?![^(]*\))/g, te = /:([^]+)/, ne = /"(?:[^"\\]|\\[^])*"|'(?:[^'\\]|\\[^])*'|\\[^]|\/\*[^]*?\*\//g;
+function re(e) {
+	let t = {};
+	return e.replace(ne, (e) => e.startsWith("/*") ? "" : e).split(T).forEach((e) => {
+		if (e) {
+			let n = e.split(te);
+			n.length > 1 && (t[n[0].trim()] = n[1].trim());
+		}
+	}), t;
+}
+function E(e) {
+	let t = "";
+	if (p(e)) t = e;
+	else if (l(e)) for (let n = 0; n < e.length; n++) {
+		let r = E(e[n]);
+		r && (t += r + " ");
+	}
+	else if (h(e)) for (let n in e) e[n] && (t += n + " ");
+	return t.trim();
+}
+// node_modules/.pnpm/@vue+reactivity@3.5.46/node_modules/@vue/reactivity/dist/reactivity.esm-bundler.js
+var D, ie = class {
+	constructor(e = !1) {
+		this.detached = e, this._active = !0, this._on = 0, this.effects = [], this.cleanups = [], this._isPaused = !1, this._warnOnRun = !0, this.__v_skip = !0, !e && D && (D.active ? (this.parent = D, this.index = (D.scopes || (D.scopes = [])).push(this) - 1) : (this._active = !1, this._warnOnRun = !1));
+	}
+	get active() {
+		return this._active;
+	}
+	pause() {
+		if (this._active) {
+			this._isPaused = !0;
+			let e, t;
+			if (this.scopes) {
+				let n = this.scopes.slice();
+				for (e = 0, t = n.length; e < t; e++) n[e].pause();
+			}
+			for (e = 0, t = this.effects.length; e < t; e++) this.effects[e].pause();
+		}
+	}
+	resume() {
+		if (this._active && this._isPaused) {
+			this._isPaused = !1;
+			let e, t;
+			if (this.scopes) {
+				let n = this.scopes.slice();
+				for (e = 0, t = n.length; e < t; e++) n[e].resume();
+			}
+			let n = this.effects.slice();
+			for (e = 0, t = n.length; e < t; e++) n[e].resume();
+		}
+	}
+	run(e) {
+		if (this._active) {
+			let t = D;
+			try {
+				return D = this, e();
+			} finally {
+				D = t;
+			}
+		}
+	}
+	on() {
+		++this._on === 1 && (this.prevScope = D, D = this);
+	}
+	off() {
+		if (this._on > 0 && --this._on === 0) {
+			if (D === this) D = this.prevScope;
+			else {
+				let e = D;
+				for (; e;) {
+					if (e.prevScope === this) {
+						e.prevScope = this.prevScope;
+						break;
+					}
+					e = e.prevScope;
+				}
+			}
+			this.prevScope = void 0;
+		}
+	}
+	stop(e) {
+		if (this._active) {
+			this._active = !1;
+			let t, n;
+			for (t = 0, n = this.effects.length; t < n; t++) this.effects[t].stop();
+			for (this.effects.length = 0, t = 0, n = this.cleanups.length; t < n; t++) this.cleanups[t]();
+			if (this.cleanups.length = 0, this.scopes) {
+				let e = this.scopes.slice();
+				for (t = 0, n = e.length; t < n; t++) e[t].stop(!0);
+				this.scopes.length = 0;
+			}
+			if (!this.detached && this.parent && !e) {
+				let e = this.parent.scopes.pop();
+				e && e !== this && (this.parent.scopes[this.index] = e, e.index = this.index);
+			}
+			this.parent = void 0;
+		}
+	}
+};
+function ae(e) {
+	return new ie(e);
+}
+function oe() {
+	return D;
+}
+var O, se = /* @__PURE__ */ new WeakSet(), ce = class {
+	constructor(e) {
+		this.fn = e, this.deps = void 0, this.depsTail = void 0, this.flags = 5, this.next = void 0, this.cleanup = void 0, this.scheduler = void 0, D && (D.active ? D.effects.push(this) : this.flags &= -2);
+	}
+	pause() {
+		this.flags |= 64;
+	}
+	resume() {
+		this.flags & 64 && (this.flags &= -65, se.has(this) && (se.delete(this), this.trigger()));
+	}
+	notify() {
+		this.flags & 2 && !(this.flags & 32) || this.flags & 8 || fe(this);
+	}
+	run() {
+		if (!(this.flags & 1)) return this.fn();
+		this.flags |= 2, we(this), he(this);
+		let e = O, t = k;
+		O = this, k = !0;
+		try {
+			return this.fn();
+		} finally {
+			ge(this), O = e, k = t, this.flags &= -3;
+		}
+	}
+	stop() {
+		if (this.flags & 1) {
+			for (let e = this.deps; e; e = e.nextDep) ye(e);
+			this.deps = this.depsTail = void 0, we(this), this.onStop && this.onStop(), this.flags &= -2;
+		}
+	}
+	trigger() {
+		this.flags & 64 ? se.add(this) : this.scheduler ? this.scheduler() : this.runIfDirty();
+	}
+	runIfDirty() {
+		_e(this) && this.run();
+	}
+	get dirty() {
+		return _e(this);
+	}
+}, le = 0, ue, de;
+function fe(e, t = !1) {
+	e.flags |= 8, t ? (e.next = de, de = e) : (e.next = ue, ue = e);
+}
+function pe() {
+	le++;
+}
+function me() {
+	if (--le > 0) return;
+	if (de) {
+		let e = de;
+		for (de = void 0; e;) {
+			let t = e.next;
+			e.next = void 0, e.flags &= -9, e = t;
+		}
+	}
+	let e;
+	for (; ue;) {
+		let t = ue;
+		for (ue = void 0; t;) {
+			let n = t.next;
+			if (t.next = void 0, t.flags &= -9, t.flags & 1) try {
+				t.trigger();
+			} catch (t) {
+				e ||= t;
+			}
+			t = n;
+		}
+	}
+	if (e) throw e;
+}
+function he(e) {
+	for (let t = e.deps; t; t = t.nextDep) t.version = -1, t.prevActiveLink = t.dep.activeLink, t.dep.activeLink = t;
+}
+function ge(e) {
+	let t, n = e.depsTail, r = n;
+	for (; r;) {
+		let e = r.prevDep;
+		r.version === -1 ? (r === n && (n = e), ye(r), be(r)) : t = r, r.dep.activeLink = r.prevActiveLink, r.prevActiveLink = void 0, r = e;
+	}
+	e.deps = t, e.depsTail = n;
+}
+function _e(e) {
+	for (let t = e.deps; t; t = t.nextDep) if (t.dep.version !== t.version || t.dep.computed && (ve(t.dep.computed) || t.dep.version !== t.version)) return !0;
+	return !!e._dirty;
+}
+function ve(e) {
+	if (e.flags & 4 && !(e.flags & 16) || (e.flags &= -17, e.globalVersion === Te) || (e.globalVersion = Te, !e.isSSR && e.flags & 128 && (!e.deps && !e._dirty || !_e(e)))) return;
+	e.flags |= 2;
+	let t = e.dep, n = O, r = k;
+	O = e, k = !0;
+	try {
+		he(e);
+		let n = e.fn(e._value);
+		(t.version === 0 || x(n, e._value)) && (e.flags |= 128, e._value = n, t.version++);
+	} catch (e) {
+		throw t.version++, e;
+	} finally {
+		O = n, k = r, ge(e), e.flags &= -3;
+	}
+}
+function ye(e, t = !1) {
+	let { dep: n, prevSub: r, nextSub: i } = e;
+	if (r && (r.nextSub = i, e.prevSub = void 0), i && (i.prevSub = r, e.nextSub = void 0), n.subs === e && (n.subs = r, !r && n.computed)) {
+		n.computed.flags &= -5;
+		for (let e = n.computed.deps; e; e = e.nextDep) ye(e, !0);
+	}
+	!t && !--n.sc && n.map && n.map.delete(n.key);
+}
+function be(e) {
+	let { prevDep: t, nextDep: n } = e;
+	t && (t.nextDep = n, e.prevDep = void 0), n && (n.prevDep = t, e.nextDep = void 0);
+}
+var k = !0, xe = [];
+function Se() {
+	xe.push(k), k = !1;
+}
+function Ce() {
+	let e = xe.pop();
+	k = e === void 0 || e;
+}
+function we(e) {
+	let { cleanup: t } = e;
+	if (e.cleanup = void 0, t) {
+		let e = O;
+		O = void 0;
+		try {
+			t();
+		} finally {
+			O = e;
+		}
+	}
+}
+var Te = 0, Ee = class {
+	constructor(e, t) {
+		this.sub = e, this.dep = t, this.version = t.version, this.nextDep = this.prevDep = this.nextSub = this.prevSub = this.prevActiveLink = void 0;
+	}
+}, De = class {
+	constructor(e) {
+		this.computed = e, this.version = 0, this.activeLink = void 0, this.subs = void 0, this.map = void 0, this.key = void 0, this.sc = 0, this.__v_skip = !0;
+	}
+	track(e) {
+		if (!O || !k || O === this.computed) return;
+		let t = this.activeLink;
+		if (t === void 0 || t.sub !== O) t = this.activeLink = new Ee(O, this), O.deps ? (t.prevDep = O.depsTail, O.depsTail.nextDep = t, O.depsTail = t) : O.deps = O.depsTail = t, Oe(t);
+		else if (t.version === -1 && (t.version = this.version, t.nextDep)) {
+			let e = t.nextDep;
+			e.prevDep = t.prevDep, t.prevDep && (t.prevDep.nextDep = e), t.prevDep = O.depsTail, t.nextDep = void 0, O.depsTail.nextDep = t, O.depsTail = t, O.deps === t && (O.deps = e);
+		}
+		return t;
+	}
+	trigger(e) {
+		this.version++, Te++, this.notify(e);
+	}
+	notify(e) {
+		pe();
+		try {
+			for (let e = this.subs; e; e = e.prevSub) e.sub.notify() && e.sub.dep.notify();
+		} finally {
+			me();
+		}
+	}
+};
+function Oe(e) {
+	if (e.dep.sc++, e.sub.flags & 4) {
+		let t = e.dep.computed;
+		if (t && !e.dep.subs) {
+			t.flags |= 20;
+			for (let e = t.deps; e; e = e.nextDep) Oe(e);
+		}
+		let n = e.dep.subs;
+		n !== e && (e.prevSub = n, n && (n.nextSub = e)), e.dep.subs = e;
+	}
+}
+var ke = /* @__PURE__ */ new WeakMap(), Ae = /* @__PURE__ */ Symbol(""), je = /* @__PURE__ */ Symbol(""), Me = /* @__PURE__ */ Symbol("");
+function A(e, t, n) {
+	if (k && O) {
+		let t = ke.get(e);
+		t || ke.set(e, t = /* @__PURE__ */ new Map());
+		let r = t.get(n);
+		r || (t.set(n, r = new De()), r.map = t, r.key = n), r.track();
+	}
+}
+function j(e, t, n, r, i, a) {
+	let o = ke.get(e);
+	if (!o) {
+		Te++;
+		return;
+	}
+	let s = (e) => {
+		e && e.trigger();
+	};
+	if (pe(), t === "clear") o.forEach(s);
+	else {
+		let i = l(e), a = i && ee(n);
+		if (i && n === "length") {
+			let e = Number(r);
+			o.forEach((t, n) => {
+				(n === "length" || n === Me || !m(n) && n >= e) && s(t);
+			});
+		} else switch ((n !== void 0 || o.has(void 0)) && s(o.get(n)), a && s(o.get(Me)), t) {
+			case "add":
+				i ? a && s(o.get("length")) : (s(o.get(Ae)), u(e) && s(o.get(je)));
+				break;
+			case "delete":
+				i || (s(o.get(Ae)), u(e) && s(o.get(je)));
+				break;
+			case "set": u(e) && s(o.get(Ae));
+		}
+	}
+	me();
+}
+function Ne(e) {
+	let t = /* @__PURE__ */ F(e);
+	return t === e || (A(t, "iterate", Me), /* @__PURE__ */ P(e)) ? t : /* @__PURE__ */ pt(e) ? /* @__PURE__ */ ft(e) ? t.map((e) => ht(I(e))) : t.map(ht) : t.map(I);
+}
+function Pe(e) {
+	return A(e = /* @__PURE__ */ F(e), "iterate", Me), e;
+}
+function M(e, t) {
+	return /* @__PURE__ */ pt(e) ? ht(/* @__PURE__ */ ft(e) ? I(t) : t) : I(t);
+}
+var Fe = {
+	__proto__: null,
+	[Symbol.iterator]() {
+		return Ie(this, Symbol.iterator, (e) => M(this, e));
+	},
+	concat(...e) {
+		return Ne(this).concat(...e.map((e) => l(e) ? Ne(e) : e));
+	},
+	entries() {
+		return Ie(this, "entries", (e) => (e[1] = M(this, e[1]), e));
+	},
+	every(e, t) {
+		return N(this, "every", e, t, void 0, arguments);
+	},
+	filter(e, t) {
+		return N(this, "filter", e, t, (e) => e.map((e) => M(this, e)), arguments);
+	},
+	find(e, t) {
+		return N(this, "find", e, t, (e) => M(this, e), arguments);
+	},
+	findIndex(e, t) {
+		return N(this, "findIndex", e, t, void 0, arguments);
+	},
+	findLast(e, t) {
+		return N(this, "findLast", e, t, (e) => M(this, e), arguments);
+	},
+	findLastIndex(e, t) {
+		return N(this, "findLastIndex", e, t, void 0, arguments);
+	},
+	forEach(e, t) {
+		return N(this, "forEach", e, t, void 0, arguments);
+	},
+	includes(...e) {
+		return Be(this, "includes", e);
+	},
+	indexOf(...e) {
+		return Be(this, "indexOf", e);
+	},
+	join(e) {
+		return Ne(this).join(e);
+	},
+	lastIndexOf(...e) {
+		return Be(this, "lastIndexOf", e);
+	},
+	map(e, t) {
+		return N(this, "map", e, t, void 0, arguments);
+	},
+	pop() {
+		return Ve(this, "pop");
+	},
+	push(...e) {
+		return Ve(this, "push", e);
+	},
+	reduce(e, ...t) {
+		return ze(this, "reduce", e, t);
+	},
+	reduceRight(e, ...t) {
+		return ze(this, "reduceRight", e, t);
+	},
+	shift() {
+		return Ve(this, "shift");
+	},
+	some(e, t) {
+		return N(this, "some", e, t, void 0, arguments);
+	},
+	splice(...e) {
+		return Ve(this, "splice", e);
+	},
+	toReversed() {
+		return Ne(this).toReversed();
+	},
+	toSorted(e) {
+		return Ne(this).toSorted(e);
+	},
+	toSpliced(...e) {
+		return Ne(this).toSpliced(...e);
+	},
+	unshift(...e) {
+		return Ve(this, "unshift", e);
+	},
+	values() {
+		return Ie(this, "values", (e) => M(this, e));
+	}
+};
+function Ie(e, t, n) {
+	let r = Pe(e), i = r[t], a = i.call(r);
+	if (r !== e && !/* @__PURE__ */ P(e)) {
+		if (a[Symbol.toStringTag] === "Array Iterator") {
+			let e = Object.create(Object.getPrototypeOf(a));
+			return e.next = () => Le(a.next(), n), i !== Re[t] && Object.defineProperties(e, {
+				return: { get() {
+					let e = a.return;
+					return typeof e == "function" ? e.bind(a) : e;
+				} },
+				throw: { get() {
+					let e = a.throw;
+					return typeof e == "function" ? e.bind(a) : e;
+				} }
+			}), e;
+		}
+		a._next = a.next, a.next = () => Le(a._next(), n);
+	}
+	return a;
+}
+function Le(e, t) {
+	return e.done || (e.value = t(e.value)), e;
+}
+var Re = Array.prototype;
+function N(e, t, n, r, i, a) {
+	let o = Pe(e), s = o !== e && !/* @__PURE__ */ P(e), c = o[t];
+	if (c !== Re[t]) {
+		let t = c.apply(e, a);
+		return s ? I(t) : t;
+	}
+	let l = n;
+	o !== e && (s ? l = function(t, r) {
+		return n.call(this, M(e, t), r, e);
+	} : n.length > 2 && (l = function(t, r) {
+		return n.call(this, t, r, e);
+	}));
+	let u = c.call(o, l, r);
+	return s && i ? i(u) : u;
+}
+function ze(e, t, n, r) {
+	let i = Pe(e), a = i !== e && !/* @__PURE__ */ P(e), o = n, s = !1;
+	i !== e && (a ? (s = r.length === 0, o = function(t, r, i) {
+		return s && (s = !1, t = M(e, t)), n.call(this, t, M(e, r), i, e);
+	}) : n.length > 3 && (o = function(t, r, i) {
+		return n.call(this, t, r, i, e);
+	}));
+	let c = i[t](o, ...r);
+	return s ? M(e, c) : c;
+}
+function Be(e, t, n) {
+	let r = /* @__PURE__ */ F(e);
+	A(r, "iterate", Me);
+	let i = r[t](...n);
+	return (i === -1 || i === !1) && /* @__PURE__ */ mt(n[0]) ? (n[0] = /* @__PURE__ */ F(n[0]), r[t](...n)) : i;
+}
+function Ve(e, t, n = []) {
+	Se(), pe();
+	let r = (/* @__PURE__ */ F(e))[t].apply(e, n);
+	return me(), Ce(), r;
+}
+var He = /* @__PURE__ */ e("__proto__,__v_isRef,__isVue"), Ue = /* @__PURE__ */ new Set(/* @__PURE__ */ Object.getOwnPropertyNames(Symbol).filter((e) => e !== "arguments" && e !== "caller").map((e) => Symbol[e]).filter(m));
+function We(e) {
+	m(e) || (e = String(e));
+	let t = /* @__PURE__ */ F(this);
+	return A(t, "has", e), t.hasOwnProperty(e);
+}
+var Ge = class {
+	constructor(e = !1, t = !1) {
+		this._isReadonly = e, this._isShallow = t;
+	}
+	get(e, t, n) {
+		if (t === "__v_skip") return e.__v_skip;
+		let r = this._isReadonly, i = this._isShallow;
+		if (t === "__v_isReactive") return !r;
+		if (t === "__v_isReadonly") return r;
+		if (t === "__v_isShallow") return i;
+		if (t === "__v_raw") return n === (r ? i ? st : ot : i ? at : it).get(e) || Object.getPrototypeOf(e) === Object.getPrototypeOf(n) ? e : void 0;
+		let a = l(e);
+		if (!r) {
+			let e;
+			if (a && (e = Fe[t])) return e;
+			if (t === "hasOwnProperty") return We;
+		}
+		let o = Reflect.get(e, t, /* @__PURE__ */ L(e) ? e : n);
+		if ((m(t) ? Ue.has(t) : He(t)) || (r || A(e, "get", t), i)) return o;
+		if (/* @__PURE__ */ L(o)) {
+			let e = a && ee(t) ? o : o.value;
+			return r && h(e) ? /* @__PURE__ */ ut(e) : e;
+		}
+		return h(o) ? r ? /* @__PURE__ */ ut(o) : /* @__PURE__ */ lt(o) : o;
+	}
+}, Ke = class extends Ge {
+	constructor(e = !1) {
+		super(!1, e);
+	}
+	set(e, t, n, r) {
+		let i = e[t], a = l(e) && ee(t);
+		if (!this._isShallow) {
+			let e = /* @__PURE__ */ pt(i);
+			if (!/* @__PURE__ */ P(n) && !/* @__PURE__ */ pt(n) && (i = /* @__PURE__ */ F(i), n = /* @__PURE__ */ F(n)), !a && /* @__PURE__ */ L(i) && !/* @__PURE__ */ L(n)) return e || (i.value = n), !0;
+		}
+		let o = a ? Number(t) < e.length : c(e, t), s = Reflect.set(e, t, n, /* @__PURE__ */ L(e) ? e : r);
+		return e === /* @__PURE__ */ F(r) && s && (o ? x(n, i) && j(e, "set", t, n, i) : j(e, "add", t, n)), s;
+	}
+	deleteProperty(e, t) {
+		let n = c(e, t), r = e[t], i = Reflect.deleteProperty(e, t);
+		return i && n && j(e, "delete", t, void 0, r), i;
+	}
+	has(e, t) {
+		let n = Reflect.has(e, t);
+		return m(t) && Ue.has(t) || A(e, "has", t), n;
+	}
+	ownKeys(e) {
+		return A(e, "iterate", l(e) ? "length" : Ae), Reflect.ownKeys(e);
+	}
+}, qe = class extends Ge {
+	constructor(e = !1) {
+		super(!0, e);
+	}
+	set(e, t) {
+		return !0;
+	}
+	deleteProperty(e, t) {
+		return !0;
+	}
+}, Je = /* @__PURE__ */ new Ke(), Ye = /* @__PURE__ */ new qe(), Xe = (e) => e, Ze = (e) => Reflect.getPrototypeOf(e);
+function Qe(e, t, n) {
+	return function(...r) {
+		let i = this.__v_raw, o = /* @__PURE__ */ F(i), s = u(o), c = e === "entries" || e === Symbol.iterator && s, l = e === "keys" && s, d = i[e](...r), f = n ? Xe : t ? ht : I;
+		return !t && A(o, "iterate", l ? je : Ae), a(Object.create(d), { next() {
+			let { value: e, done: t } = d.next();
+			return t ? {
+				value: e,
+				done: t
+			} : {
+				value: c ? [f(e[0]), f(e[1])] : f(e),
+				done: t
+			};
+		} });
+	};
+}
+function $e(e) {
+	return function(...t) {
+		return e === "delete" ? !1 : e === "clear" ? void 0 : this;
+	};
+}
+function et(e, t) {
+	let n = {
+		get(n) {
+			let r = this.__v_raw, i = /* @__PURE__ */ F(r), a = /* @__PURE__ */ F(n);
+			e || (x(n, a) && A(i, "get", n), A(i, "get", a));
+			let { has: o } = Ze(i), s = t ? Xe : e ? ht : I;
+			if (o.call(i, n)) return s(r.get(n));
+			if (o.call(i, a)) return s(r.get(a));
+			r !== i && r.get(n);
+		},
+		get size() {
+			let t = this.__v_raw;
+			return !e && A(/* @__PURE__ */ F(t), "iterate", Ae), t.size;
+		},
+		has(t) {
+			let n = this.__v_raw, r = /* @__PURE__ */ F(n), i = /* @__PURE__ */ F(t);
+			return e || (x(t, i) && A(r, "has", t), A(r, "has", i)), t === i ? n.has(t) : n.has(t) || n.has(i);
+		},
+		forEach(n, r) {
+			let i = this, a = i.__v_raw, o = /* @__PURE__ */ F(a), s = t ? Xe : e ? ht : I;
+			return !e && A(o, "iterate", Ae), a.forEach((e, t) => n.call(r, s(e), s(t), i));
+		}
+	};
+	return a(n, e ? {
+		add: $e("add"),
+		set: $e("set"),
+		delete: $e("delete"),
+		clear: $e("clear")
+	} : {
+		add(e) {
+			let n = /* @__PURE__ */ F(this), r = Ze(n), i = /* @__PURE__ */ F(e), a = !t && !/* @__PURE__ */ P(e) && !/* @__PURE__ */ pt(e) ? i : e;
+			return r.has.call(n, a) || x(e, a) && r.has.call(n, e) || x(i, a) && r.has.call(n, i) || (n.add(a), j(n, "add", a, a)), this;
+		},
+		set(e, n) {
+			t || /* @__PURE__ */ P(n) || /* @__PURE__ */ pt(n) || (n = /* @__PURE__ */ F(n));
+			let r = /* @__PURE__ */ F(this), { has: i, get: a } = Ze(r), o = i.call(r, e);
+			o ||= (e = /* @__PURE__ */ F(e), i.call(r, e));
+			let s = a.call(r, e);
+			return r.set(e, n), o ? x(n, s) && j(r, "set", e, n, s) : j(r, "add", e, n), this;
+		},
+		delete(e) {
+			let t = /* @__PURE__ */ F(this), { has: n, get: r } = Ze(t), i = n.call(t, e);
+			i ||= (e = /* @__PURE__ */ F(e), n.call(t, e));
+			let a = r ? r.call(t, e) : void 0, o = t.delete(e);
+			return i && j(t, "delete", e, void 0, a), o;
+		},
+		clear() {
+			let e = /* @__PURE__ */ F(this), t = e.size !== 0, n = e.clear();
+			return t && j(e, "clear", void 0, void 0, void 0), n;
+		}
+	}), [
+		"keys",
+		"values",
+		"entries",
+		Symbol.iterator
+	].forEach((r) => {
+		n[r] = Qe(r, e, t);
+	}), n;
+}
+function tt(e, t) {
+	let n = et(e, t);
+	return (r, i, a) => i === "__v_isReactive" ? !e : i === "__v_isReadonly" ? e : i === "__v_isShallow" ? t : i === "__v_raw" ? r : Reflect.get(c(n, i) && i in r ? n : r, i, a);
+}
+var nt = { get: /* @__PURE__ */ tt(!1, !1) }, rt = { get: /* @__PURE__ */ tt(!0, !1) }, it = /* @__PURE__ */ new WeakMap(), at = /* @__PURE__ */ new WeakMap(), ot = /* @__PURE__ */ new WeakMap(), st = /* @__PURE__ */ new WeakMap();
+function ct(e) {
+	switch (e) {
+		case "Object":
+		case "Array": return 1;
+		case "Map":
+		case "Set":
+		case "WeakMap":
+		case "WeakSet": return 2;
+		default: return 0;
+	}
+}
+// @__NO_SIDE_EFFECTS__
+function lt(e) {
+	return /* @__PURE__ */ pt(e) ? e : dt(e, !1, Je, nt, it);
+}
+// @__NO_SIDE_EFFECTS__
+function ut(e) {
+	return dt(e, !0, Ye, rt, ot);
+}
+function dt(e, t, n, r, i) {
+	if (!h(e) || e.__v_raw && !(t && e.__v_isReactive) || e.__v_skip || !Object.isExtensible(e)) return e;
+	let a = i.get(e);
+	if (a) return a;
+	let o = ct(y(e));
+	if (o === 0) return e;
+	let s = new Proxy(e, o === 2 ? r : n);
+	return i.set(e, s), s;
+}
+// @__NO_SIDE_EFFECTS__
+function ft(e) {
+	return /* @__PURE__ */ pt(e) ? /* @__PURE__ */ ft(e.__v_raw) : !!(e && e.__v_isReactive);
+}
+// @__NO_SIDE_EFFECTS__
+function pt(e) {
+	return !!(e && e.__v_isReadonly);
+}
+// @__NO_SIDE_EFFECTS__
+function P(e) {
+	return !!(e && e.__v_isShallow);
+}
+// @__NO_SIDE_EFFECTS__
+function mt(e) {
+	return e ? !!e.__v_raw : !1;
+}
+// @__NO_SIDE_EFFECTS__
+function F(e) {
+	let t = e && e.__v_raw;
+	return t ? /* @__PURE__ */ F(t) : e;
+}
+var I = (e) => h(e) ? /* @__PURE__ */ lt(e) : e, ht = (e) => h(e) ? /* @__PURE__ */ ut(e) : e;
+// @__NO_SIDE_EFFECTS__
+function L(e) {
+	return e ? e.__v_isRef === !0 : !1;
+}
+// @__NO_SIDE_EFFECTS__
+function R(e) {
+	return gt(e, !1);
+}
+// @__NO_SIDE_EFFECTS__
+function z(e) {
+	return gt(e, !0);
+}
+function gt(e, t) {
+	return /* @__PURE__ */ L(e) ? e : new _t(e, t);
+}
+var _t = class {
+	constructor(e, t) {
+		this.dep = new De(), this.__v_isRef = !0, this.__v_isShallow = !1, this._rawValue = t ? e : /* @__PURE__ */ F(e), this._value = t ? e : I(e), this.__v_isShallow = t;
+	}
+	get value() {
+		return this.dep.track(), this._value;
+	}
+	set value(e) {
+		let t = this._rawValue, n = this.__v_isShallow || /* @__PURE__ */ P(e) || /* @__PURE__ */ pt(e);
+		e = n ? e : /* @__PURE__ */ F(e), x(e, t) && (this._rawValue = e, this._value = n ? e : I(e), this.dep.trigger());
+	}
+}, vt = class {
+	constructor(e, t, n) {
+		this.fn = e, this.setter = t, this._value = void 0, this.dep = new De(this), this.__v_isRef = !0, this.deps = void 0, this.depsTail = void 0, this.flags = 16, this.globalVersion = Te - 1, this.next = void 0, this.effect = this, this.__v_isReadonly = !t, this.isSSR = n;
+	}
+	notify() {
+		if (this.flags |= 16, !(this.flags & 8) && O !== this) return fe(this, !0), !0;
+	}
+	get value() {
+		let e = this.dep.track();
+		return ve(this), e && (e.version = this.dep.version), this._value;
+	}
+	set value(e) {
+		this.setter && this.setter(e);
+	}
+};
+// @__NO_SIDE_EFFECTS__
+function yt(e, t, n = !1) {
+	let r, i;
+	return f(e) ? r = e : (r = e.get, i = e.set), new vt(r, i, n);
+}
+var bt = {}, xt = /* @__PURE__ */ new WeakMap(), St = void 0;
+function Ct(e, t = !1, n = St) {
+	if (n) {
+		let t = xt.get(n);
+		t || xt.set(n, t = []), t.push(e);
+	}
+}
+function wt(e, r, i = t) {
+	let { immediate: a, deep: s, once: c, scheduler: u, augmentJob: d, call: p } = i, m = (e) => s ? e : /* @__PURE__ */ P(e) || s === !1 || s === 0 ? Tt(e, 1) : Tt(e), h, g, _, v, y = !1, b = !1;
+	if (/* @__PURE__ */ L(e) ? (g = () => e.value, y = /* @__PURE__ */ P(e)) : /* @__PURE__ */ ft(e) ? (g = () => m(e), y = !0) : l(e) ? (b = !0, y = e.some((e) => /* @__PURE__ */ ft(e) || /* @__PURE__ */ P(e)), g = () => e.map((e) => {
+		if (/* @__PURE__ */ L(e)) return e.value;
+		if (/* @__PURE__ */ ft(e)) return m(e);
+		if (f(e)) return p ? p(e, 2) : e();
+	})) : g = f(e) ? r ? p ? () => p(e, 2) : e : () => {
+		if (_) {
+			Se();
+			try {
+				_();
+			} finally {
+				Ce();
+			}
+		}
+		let t = St;
+		St = h;
+		try {
+			return p ? p(e, 3, [v]) : e(v);
+		} finally {
+			St = t;
+		}
+	} : n, r && s) {
+		let e = g, t = s === !0 ? Infinity : s;
+		g = () => Tt(e(), t);
+	}
+	let ee = oe(), S = () => {
+		h.stop(), ee && ee.active && o(ee.effects, h);
+	};
+	if (c && r) {
+		let e = r;
+		r = (...t) => {
+			try {
+				return e(...t);
+			} finally {
+				S();
+			}
+		};
+	}
+	let C = b ? Array(e.length).fill(bt) : bt, w = (e) => {
+		if (h.flags & 1 && (h.dirty || e)) {
+			if (r) {
+				let t = h.run();
+				if (e || s || y || (b ? t.some((e, t) => x(e, C[t])) : x(t, C))) {
+					let e = St;
+					Se();
+					try {
+						_ && _(), St = h;
+						let e = [
+							t,
+							C === bt ? void 0 : b && C[0] === bt ? [] : C,
+							v
+						];
+						C = t, p ? p(r, 3, e) : r(...e);
+					} finally {
+						St = e, Ce();
+					}
+				}
+			} else h.run();
+		}
+	};
+	return d && d(w), h = new ce(g), h.scheduler = u ? () => u(w, !1) : w, v = (e) => Ct(e, !1, h), _ = h.onStop = () => {
+		let e = xt.get(h);
+		if (e) {
+			if (p) p(e, 4);
+			else for (let t of e) t();
+			xt.delete(h);
+		}
+	}, r ? a ? w(!0) : C = h.run() : u ? u(w.bind(null, !0), !0) : h.run(), S.pause = h.pause.bind(h), S.resume = h.resume.bind(h), S.stop = S, S;
+}
+function Tt(e, t = Infinity, n) {
+	if (t <= 0 || !h(e) || e.__v_skip || (n ||= /* @__PURE__ */ new Map(), (n.get(e) || 0) >= t)) return e;
+	if (n.set(e, t), t--, /* @__PURE__ */ L(e)) Tt(e.value, t, n);
+	else if (l(e)) for (let r = 0; r < e.length; r++) Tt(e[r], t, n);
+	else if (d(e) || u(e)) e.forEach((e) => {
+		Tt(e, t, n);
+	});
+	else if (b(e)) {
+		for (let r in e) Tt(e[r], t, n);
+		for (let r of Object.getOwnPropertySymbols(e)) Object.prototype.propertyIsEnumerable.call(e, r) && Tt(e[r], t, n);
+	}
+	return e;
+}
+// node_modules/.pnpm/@vue+runtime-core@3.5.46/node_modules/@vue/runtime-core/dist/runtime-core.esm-bundler.js
+function Et(e, t, n, r) {
+	try {
+		return r ? e(...r) : e();
+	} catch (e) {
+		Ot(e, t, n);
+	}
+}
+function Dt(e, t, n, r) {
+	if (f(e)) {
+		let i = Et(e, t, n, r);
+		return i && g(i) && i.catch((e) => {
+			Ot(e, t, n, void 0, !0);
+		}), i;
+	}
+	if (l(e)) {
+		let i = [];
+		for (let a = 0; a < e.length; a++) i.push(Dt(e[a], t, n, r));
+		return i;
+	}
+}
+function Ot(e, n, r, i = !0, a = !1) {
+	let o = n ? n.vnode : null, { errorHandler: s, throwUnhandledErrorInProduction: c } = n && n.appContext.config || t;
+	if (n) {
+		let t = n.parent, i = n.proxy, o = `https://vuejs.org/error-reference/#runtime-${r}`;
+		for (; t;) {
+			let n = t.ec;
+			if (n && !t.isUnmounted && (!a || t.scope.active)) {
+				for (let t = 0; t < n.length; t++) if (n[t](e, i, o) === !1) return;
+			}
+			t = t.parent;
+		}
+		if (s) {
+			Se(), Et(s, null, 10, [
+				e,
+				i,
+				o
+			]), Ce();
+			return;
+		}
+	}
+	kt(e, r, o, i, c);
+}
+function kt(e, t, n, r = !0, i = !1) {
+	if (i) throw e;
+	console.error(e);
+}
+var B = [], At = -1, jt = [], Mt = null, Nt = 0, Pt = /* @__PURE__ */ Promise.resolve(), Ft = null;
+function It(e) {
+	let t = At + 1, n = B.length;
+	for (; t < n;) {
+		let r = t + n >>> 1, i = B[r], a = Vt(i);
+		a < e || a === e && i.flags & 2 ? t = r + 1 : n = r;
+	}
+	return t;
+}
+function Lt(e) {
+	if (!(e.flags & 1)) {
+		let t = Vt(e), n = B[B.length - 1];
+		!n || !(e.flags & 2) && t >= Vt(n) ? B.push(e) : B.splice(It(t), 0, e), e.flags |= 1, Rt();
+	}
+}
+function Rt() {
+	Ft ||= Pt.then(Ht);
+}
+function zt(e) {
+	if (!l(e)) Mt && e.id === -1 ? Mt.splice(Nt + 1, 0, e) : e.flags & 1 || (jt.push(e), e.flags |= 1);
+	else for (let t = 0; t < e.length; t++) jt.push(e[t]);
+	Rt();
+}
+function Bt(e, t, n = 0) {
+	if (jt.length) {
+		let e = jt, r = 0;
+		if (t) {
+			e = [];
+			for (let i = 0; i < jt.length; i++) {
+				let a = jt[i];
+				(a.i === void 0 ? t.has(a) : !a.i || a.i.uid < n) ? jt[r++] = a : e.push(a);
+			}
+		}
+		let i = [...new Set(e)].sort((e, t) => Vt(e) - Vt(t));
+		if (jt.length = r, Mt) {
+			for (let e = 0; e < i.length; e++) Mt.push(i[e]);
+			return;
+		}
+		for (Mt = i, Nt = 0; Nt < Mt.length; Nt++) {
+			let e = Mt[Nt];
+			e.flags & 4 && (e.flags &= -2), e.flags & 8 || e(), e.flags &= -2;
+		}
+		Mt = null, Nt = 0;
+	}
+}
+var Vt = (e) => e.id == null ? e.flags & 2 ? -1 : Infinity : e.id;
+function Ht(e) {
+	try {
+		for (At = 0; At < B.length; At++) {
+			let e = B[At];
+			e && !(e.flags & 8) && (e.flags & 4 && (e.flags &= -2), Et(e, e.i, e.i ? 15 : 14), e.flags & 4 || (e.flags &= -2));
+		}
+	} finally {
+		for (; At < B.length; At++) {
+			let e = B[At];
+			e && (e.flags &= -2);
+		}
+		At = -1, B.length = 0, Bt(e), Ft = null, (B.length || jt.length) && Ht(e);
+	}
+}
+var Ut = null, Wt = null;
+function Gt(e, t, n = !1) {
+	let r = Dn();
+	if (r || nn) {
+		let i = nn ? nn._context.provides : r ? r.parent == null || r.ce ? r.vnode.appContext && r.vnode.appContext.provides : r.parent.provides : void 0;
+		if (i && e in i) return i[e];
+		if (arguments.length > 1) return n && f(t) ? t.call(r && r.proxy) : t;
+	}
+}
+var Kt = /* @__PURE__ */ Symbol.for("v-scx"), qt = () => Gt(Kt);
+function Jt(e, t, n) {
+	return Yt(e, t, n);
+}
+function Yt(e, r, i = t) {
+	let { immediate: o, deep: s, flush: c, once: l } = i, u = a({}, i), d = r && o || !r && c !== "post", f;
+	if (On) {
+		if (c === "sync") {
+			let e = qt();
+			f = e.__watcherHandles ||= [];
+		} else if (!d) {
+			let e = () => {};
+			return e.stop = n, e.resume = n, e.pause = n, e;
+		}
+	}
+	let p = En;
+	u.call = (e, t, n) => Dt(e, p, t, n);
+	let m = !1;
+	c === "post" ? u.scheduler = (e) => {
+		e.i = p, sn(e, p && p.suspense);
+	} : c !== "sync" && (m = !0, u.scheduler = (e, t) => {
+		t ? e() : Lt(e);
+	}), u.augmentJob = (e) => {
+		r && (e.flags |= 4), m && (e.flags |= 2, p && (e.id = p.uid, e.i = p));
+	};
+	let h = wt(e, r, u);
+	return On && (f ? f.push(h) : d && h()), h;
+}
+var Xt = (e) => e.__isTeleport;
+function Zt(e) {
+	let t = e[0];
+	if (e.length > 1) {
+		for (let n of e) if (n.type !== fn) {
+			t = n;
+			break;
+		}
+	}
+	return t;
+}
+function Qt(e) {
+	if (!en(e)) return Xt(e.type) && e.children ? Zt(e.children) : e;
+	if (e.component) return e.component.subTree;
+	let { shapeFlag: t, children: n } = e;
+	if (n) {
+		if (t & 16) return n[0];
+		if (t & 32 && f(n.default)) return n.default();
+	}
+}
+function $t(e, t) {
+	if (e.shapeFlag & 6 && e.component) {
+		e.transition = t;
+		let n = e.component.subTree;
+		$t(Xt(n.type) && Qt(n) || n, t);
+	} else if (e.shapeFlag & 128) {
+		let n = e.suspense;
+		if (n) {
+			let e = n.isHydrating ? n.pendingBranch : n.activeBranch;
+			e && $t(e, t.clone(e));
+		} else e.ssContent.transition = t.clone(e.ssContent), e.ssFallback.transition = t.clone(e.ssFallback);
+	} else if (e.transition = t, e.type === un && l(e.children)) {
+		let n = rn(e.children, !1);
+		n && $t(n, t);
+	}
+}
+C().requestIdleCallback, C().cancelIdleCallback;
+var en = (e) => e.type.__isKeepAlive, tn = /* @__PURE__ */ Symbol.for("v-ndc"), nn = null;
+function rn(e, t = !0) {
+	let n;
+	for (let t = 0; t < e.length; t++) {
+		let r = e[t];
+		if (hn(r)) {
+			if (r.type !== fn || r.children === "v-if") {
+				if (n) return;
+				n = r;
+			}
+		} else return;
+	}
+	return n;
+}
+var an = {}, on = (e) => Object.getPrototypeOf(e) === an, sn = ln, cn = (e) => e.__isSuspense;
+function ln(e, t) {
+	t && t.pendingBranch ? l(e) ? t.effects.push(...e) : t.effects.push(e) : zt(e);
+}
+var un = /* @__PURE__ */ Symbol.for("v-fgt"), dn = /* @__PURE__ */ Symbol.for("v-txt"), fn = /* @__PURE__ */ Symbol.for("v-cmt"), pn = 1;
+function mn(e, t = !1) {
+	pn += e;
+}
+function hn(e) {
+	return e ? e.__v_isVNode === !0 : !1;
+}
+var gn = ({ key: e }) => e ?? null, _n = ({ ref: e, ref_key: t, ref_for: n }) => (typeof e == "number" && (e = "" + e), e == null ? null : p(e) || /* @__PURE__ */ L(e) || f(e) ? {
+	i: Ut,
+	r: e,
+	k: t,
+	f: !!n
+} : e);
+function vn(e, t = null, n = null, r = 0, i = null, a = e === un ? 0 : 1, o = !1, s = !1) {
+	let c = {
+		__v_isVNode: !0,
+		__v_skip: !0,
+		type: e,
+		props: t,
+		key: t && gn(t),
+		ref: t && _n(t),
+		scopeId: Wt,
+		slotScopeIds: null,
+		children: n,
+		component: null,
+		suspense: null,
+		ssContent: null,
+		ssFallback: null,
+		dirs: null,
+		transition: null,
+		el: null,
+		anchor: null,
+		target: null,
+		targetStart: null,
+		targetAnchor: null,
+		staticCount: 0,
+		shapeFlag: a,
+		patchFlag: r,
+		dynamicProps: i,
+		dynamicChildren: null,
+		appContext: null,
+		ctx: Ut
+	};
+	return s ? (wn(c, n), a & 128 && e.normalize(c)) : n && (c.shapeFlag |= p(n) ? 8 : 16), c;
+}
+var yn = bn;
+function bn(e, t = null, n = null, r = 0, i = null, o = !1) {
+	if (e && e !== tn || (e = fn), hn(e)) {
+		let r = Sn(e, t, !0);
+		return n && wn(r, n), r.patchFlag = -2, r;
+	}
+	if (An(e) && (e = e.__vccOpts), t) {
+		t = xn(t);
+		let { class: e, style: n } = t;
+		e && !p(e) && (t.class = E(e)), h(n) && (/* @__PURE__ */ mt(n) && !l(n) && (n = a({}, n)), t.style = w(n));
+	}
+	let s = p(e) ? 1 : cn(e) ? 128 : Xt(e) ? 64 : h(e) ? 4 : f(e) ? 2 : 0;
+	return vn(e, t, n, r, i, s, o, !0);
+}
+function xn(e) {
+	return e ? /* @__PURE__ */ mt(e) ? a({}, e) : on(e) ? a({}, e[kn] || e) : e : null;
+}
+function Sn(e, t, n = !1, r = !1) {
+	let { props: i, ref: a, patchFlag: o, children: s, transition: c } = e, u = t ? Tn(i || {}, t) : i, d = {
+		__v_isVNode: !0,
+		__v_skip: !0,
+		type: e.type,
+		props: u,
+		key: u && gn(u),
+		ref: t && t.ref ? n && a ? l(a) ? a.concat(_n(t)) : [a, _n(t)] : _n(t) : a,
+		scopeId: e.scopeId,
+		slotScopeIds: e.slotScopeIds,
+		children: s,
+		target: e.target,
+		targetStart: e.targetStart,
+		targetAnchor: e.targetAnchor,
+		staticCount: e.staticCount,
+		shapeFlag: e.shapeFlag,
+		patchFlag: t && e.type !== un ? o === -1 ? 16 : o | 16 : o,
+		dynamicProps: e.dynamicProps,
+		dynamicChildren: e.dynamicChildren,
+		appContext: e.appContext,
+		dirs: e.dirs,
+		transition: c,
+		component: e.component,
+		suspense: e.suspense,
+		ssContent: e.ssContent && Sn(e.ssContent),
+		ssFallback: e.ssFallback && Sn(e.ssFallback),
+		placeholder: e.placeholder,
+		el: e.el,
+		anchor: e.anchor,
+		ctx: e.ctx,
+		ce: e.ce,
+		cacheIndex: e.cacheIndex
+	};
+	return c && r && $t(d, c.clone(d)), d;
+}
+function Cn(e = " ", t = 0) {
+	return yn(dn, null, e, t);
+}
+function wn(e, t) {
+	let n = 0, { shapeFlag: r } = e;
+	if (t == null) t = null;
+	else if (l(t)) n = 16;
+	else if (typeof t == "object") {
+		if (r & 65) {
+			let n = t.default;
+			n && (n._c && (n._d = !1), wn(e, n()), n._c && (n._d = !0));
+			return;
+		}
+		n = 32, !t._ && !on(t) && (t._ctx = Ut);
+	} else if (f(t)) {
+		if (r & 65) {
+			wn(e, { default: t });
+			return;
+		}
+		t = {
+			default: t,
+			_ctx: Ut
+		}, n = 32;
+	} else t = String(t), r & 64 ? (n = 16, t = [Cn(t)]) : n = 8;
+	e.children = t, e.shapeFlag |= n;
+}
+function Tn(...e) {
+	let t = {};
+	for (let n = 0; n < e.length; n++) {
+		let a = e[n];
+		for (let e in a) if (e === "class") t.class !== a.class && (t.class = E([t.class, a.class]));
+		else if (e === "style") t.style = w([t.style, a.style]);
+		else if (r(e)) {
+			let n = t[e], r = a[e];
+			r && n !== r && !(l(n) && n.includes(r)) ? t[e] = n ? [].concat(n, r) : r : r == null && n == null && !i(e) && (t[e] = r);
+		} else e !== "" && (t[e] = a[e]);
+	}
+	return t;
+}
+var En = null, Dn = () => En || Ut;
+{
+	let e = C(), t = (t, n) => {
+		let r;
+		return (r = e[t]) || (r = e[t] = []), r.push(n), (e) => {
+			r.length > 1 ? r.forEach((t) => t(e)) : r[0](e);
+		};
+	};
+	t("__VUE_INSTANCE_SETTERS__", (e) => En = e), t("__VUE_SSR_SETTERS__", (e) => On = e);
+}
+var On = !1, kn = /* @__PURE__ */ Symbol();
+function An(e) {
+	return f(e) && "__vccOpts" in e;
+}
+var V = (e, t) => /* @__PURE__ */ yt(e, t, On);
+function jn(e, t, n) {
+	try {
+		mn(-1);
+		let r = arguments.length;
+		return r === 2 ? h(t) && !l(t) ? hn(t) ? yn(e, null, [t]) : yn(e, t) : yn(e, null, t) : (r > 3 ? n = Array.prototype.slice.call(arguments, 2) : r === 3 && hn(n) && (n = [n]), yn(e, t, n));
+	} finally {
+		mn(1);
+	}
+}
+String.fromCharCode;
+var Mn = /#/g, Nn = /&/g, Pn = /\//g, Fn = /=/g, In = /\+/g, Ln = /%5e/gi, Rn = /%60/gi, zn = /%7c/gi, Bn = /%20/gi;
+function Vn(e) {
+	return encodeURI("" + e).replace(zn, "|");
+}
+function Hn(e) {
+	return Vn(typeof e == "string" ? e : JSON.stringify(e)).replace(In, "%2B").replace(Bn, "+").replace(Mn, "%23").replace(Nn, "%26").replace(Rn, "`").replace(Ln, "^").replace(Pn, "%2F");
+}
+function Un(e) {
+	return Hn(e).replace(Fn, "%3D");
+}
+function Wn(e = "") {
+	try {
+		return decodeURIComponent("" + e);
+	} catch {
+		return "" + e;
+	}
+}
+function Gn(e) {
+	return Wn(e.replace(In, " "));
+}
+function Kn(e) {
+	return Wn(e.replace(In, " "));
+}
+function qn(e = "") {
+	let t = /* @__PURE__ */ Object.create(null);
+	e[0] === "?" && (e = e.slice(1));
+	for (let n of e.split("&")) {
+		let e = n.match(/([^=]+)=?(.*)/) || [];
+		if (e.length < 2) continue;
+		let r = Gn(e[1]);
+		if (r === "__proto__" || r === "constructor") continue;
+		let i = Kn(e[2] || "");
+		t[r] === void 0 ? t[r] = i : Array.isArray(t[r]) ? t[r].push(i) : t[r] = [t[r], i];
+	}
+	return t;
+}
+function Jn(e, t) {
+	return (typeof t == "number" || typeof t == "boolean") && (t = String(t)), t ? Array.isArray(t) ? t.map((t) => `${Un(e)}=${Hn(t)}`).join("&") : `${Un(e)}=${Hn(t)}` : Un(e);
+}
+function Yn(e) {
+	return Object.keys(e).filter((t) => e[t] !== void 0).map((t) => Jn(t, e[t])).filter(Boolean).join("&");
+}
+var Xn = /^[\s\w\0+.-]{2,}:([/\\]{1,2})/, Zn = /^[\s\w\0+.-]{2,}:([/\\]{2})?/, Qn = /^([/\\]\s*){2,}[^/\\]/, $n = /\/$|\/\?|\/#/, er = /^\.?\//;
+function tr(e, t = {}) {
+	return typeof t == "boolean" && (t = { acceptRelative: t }), t.strict ? Xn.test(e) : Zn.test(e) || (t.acceptRelative ? Qn.test(e) : !1);
+}
+function nr(e = "", t) {
+	return t ? $n.test(e) : e.endsWith("/");
+}
+function rr(e = "", t) {
+	if (!t) return e.endsWith("/") ? e : e + "/";
+	if (nr(e, !0)) return e || "/";
+	let n = e, r = "", i = e.indexOf("#");
+	if (i !== -1 && (n = e.slice(0, i), r = e.slice(i), !n)) return r;
+	let [a, ...o] = n.split("?");
+	return a + "/" + (o.length > 0 ? `?${o.join("?")}` : "") + r;
+}
+function ir(e, t) {
+	let n = cr(e);
+	return n.search = Yn({
+		...qn(n.search),
+		...t
+	}), ur(n);
+}
+function ar(e) {
+	return e && e !== "/";
+}
+function or(e, ...t) {
+	let n = e || "";
+	for (let e of t.filter((e) => ar(e))) if (n) {
+		let t = e.replace(er, "");
+		n = rr(n) + t;
+	} else n = e;
+	return n;
+}
+var sr = Symbol.for("ufo:protocolRelative");
+function cr(e = "", t) {
+	let n = e.match(/^[\s\0]*(blob:|data:|javascript:|vbscript:)(.*)/i);
+	if (n) {
+		let [, e, t = ""] = n;
+		return {
+			protocol: e.toLowerCase(),
+			pathname: t,
+			href: e + t,
+			auth: "",
+			host: "",
+			search: "",
+			hash: ""
+		};
+	}
+	if (!tr(e, { acceptRelative: !0 })) return t ? cr(t + e) : lr(e);
+	let [, r = "", i, a = ""] = e.replace(/\\/g, "/").match(/^[\s\0]*([\w+.-]{2,}:)?\/\/([^/@]+@)?(.*)/) || [], [, o = "", s = ""] = a.match(/([^#/?]*)(.*)?/) || [];
+	r === "file:" && (s = s.replace(/\/(?=[A-Za-z]:)/, ""));
+	let { pathname: c, search: l, hash: u } = lr(s);
+	return {
+		protocol: r.toLowerCase(),
+		auth: i ? i.slice(0, Math.max(0, i.length - 1)) : "",
+		host: o,
+		pathname: c,
+		search: l,
+		hash: u,
+		[sr]: !r
+	};
+}
+function lr(e = "") {
+	let [t = "", n = "", r = ""] = (e.match(/([^#?]*)(\?[^#]*)?(#.*)?/) || []).splice(1);
+	return {
+		pathname: t,
+		search: n,
+		hash: r
+	};
+}
+function ur(e) {
+	let t = e.pathname || "", n = e.search ? (e.search.startsWith("?") ? "" : "?") + e.search : "", r = e.hash || "", i = e.auth ? e.auth + "@" : "", a = e.host || "";
+	return (e.protocol || e[sr] ? (e.protocol || "") + "//" : "") + i + a + t + n + r;
+}
+// node_modules/.pnpm/destr@2.0.5/node_modules/destr/dist/index.mjs
+var dr = /"(?:_|\\u0{2}5[Ff]){2}(?:p|\\u0{2}70)(?:r|\\u0{2}72)(?:o|\\u0{2}6[Ff])(?:t|\\u0{2}74)(?:o|\\u0{2}6[Ff])(?:_|\\u0{2}5[Ff]){2}"\s*:/, fr = /"(?:c|\\u0063)(?:o|\\u006[Ff])(?:n|\\u006[Ee])(?:s|\\u0073)(?:t|\\u0074)(?:r|\\u0072)(?:u|\\u0075)(?:c|\\u0063)(?:t|\\u0074)(?:o|\\u006[Ff])(?:r|\\u0072)"\s*:/, pr = /^\s*["[{]|^\s*-?\d{1,16}(\.\d{1,17})?([Ee][+-]?\d+)?\s*$/;
+function mr(e, t) {
+	if (e === "__proto__" || e === "constructor" && t && typeof t == "object" && "prototype" in t) hr(e);
+	else return t;
+}
+function hr(e) {
+	console.warn(`[destr] Dropping "${e}" key to prevent prototype pollution.`);
+}
+function gr(e, t = {}) {
+	if (typeof e != "string") return e;
+	if (e[0] === "\"" && e[e.length - 1] === "\"" && e.indexOf("\\") === -1) return e.slice(1, -1);
+	let n = e.trim();
+	if (n.length <= 9) switch (n.toLowerCase()) {
+		case "true": return !0;
+		case "false": return !1;
+		case "undefined": return;
+		case "null": return null;
+		case "nan": return NaN;
+		case "infinity": return Infinity;
+		case "-infinity": return -Infinity;
+	}
+	if (!pr.test(e)) {
+		if (t.strict) throw SyntaxError("[destr] Invalid JSON");
+		return e;
+	}
+	try {
+		if (dr.test(e) || fr.test(e)) {
+			if (t.strict) throw Error("[destr] Possible prototype pollution");
+			return JSON.parse(e, mr);
+		}
+		return JSON.parse(e);
+	} catch (n) {
+		if (t.strict) throw n;
+		return e;
+	}
+}
+// src/host/bridge.ts
+var _r = {
+	known: !1,
+	tray: !0,
+	panel: !0,
+	notch: void 0,
+	widget: {
+		known: !1,
+		families: []
+	}
+}, vr = {
+	trayContent: !1,
+	trayContentIcon: !1,
+	notch: !1,
+	notchActivity: !1,
+	notchSetState: !1,
+	widgetChart: !1,
+	inboxBoxes: !1,
+	inboxList: !1,
+	inboxMessage: !1,
+	inboxRemove: !1
+}, yr = [
+	["trayContent", "render.tray.content"],
+	["trayContentIcon", "render.tray.content.icon"],
+	["notch", "render.notch"],
+	["notchActivity", "render.notch.activity"],
+	["notchSetState", "notch.setState"],
+	["widgetChart", "render.widget.chart"],
+	["inboxBoxes", "inbox.boxes"],
+	["inboxList", "inbox.list"],
+	["inboxMessage", "inbox.message"],
+	["inboxRemove", "inbox.remove"]
+], br = yr.filter(([e]) => e.startsWith("inbox"));
+function xr(e) {
+	let t = e?.inputs.lang;
+	if (t === "zh" || t === "en") return t;
+	let n = globalThis.navigator, r = n?.languages?.length ? n.languages : n?.language ? [n.language] : [];
+	for (let e of r) {
+		let t = String(e).toLowerCase();
+		if (t.startsWith("zh")) return "zh";
+		if (t.startsWith("en")) return "en";
+	}
+	return "en";
+}
+function H(e, t, n) {
+	return e === "zh" ? t : n;
+}
+function Sr(e) {
+	return e instanceof Error ? e.message : String(e);
+}
+function U(e, t) {
+	try {
+		return e();
+	} catch {
+		return t;
+	}
+}
+function Cr(e) {
+	return U(() => $metrix.secret(e), "");
+}
+function wr() {
+	return U(() => {
+		let e = $metrix.outputs?.();
+		return e ? {
+			known: !0,
+			...e
+		} : _r;
+	}, _r);
+}
+function Tr() {
+	return U(() => $metrix.subscription?.() === "plus", !1);
+}
+function Er() {
+	U(() => $metrix.invalidate(), void 0);
+}
+function Dr(e) {
+	U(() => $metrix.schedule(e), void 0);
+}
+function Or(e) {
+	U(() => $metrix.toast?.(e), void 0);
+}
+function kr(...e) {
+	U(() => $metrix.log(...e), void 0);
+}
+function Ar() {
+	$metrix.panel?.open().catch(() => {});
+}
+function jr(e = 6e3) {
+	$metrix.notch?.setState("expanded", { durationMs: e }).catch(() => {});
+}
+function Mr(e) {
+	$metrix.openURL(e);
+}
+async function Nr(e) {
+	try {
+		return await navigator.clipboard.writeText(e), !0;
+	} catch {
+		return !1;
+	}
+}
+function Pr(e, t, n, r) {
+	return typeof Notification > "u" ? !1 : U(() => {
+		let i = new Notification(e, {
+			body: t,
+			tag: n
+		});
+		return i.onclick = r, !0;
+	}, !1);
+}
+function Fr(e, t) {
+	return U(() => {
+		let n = localStorage.getItem(e);
+		return n ? gr(n) ?? t : t;
+	}, t);
+}
+function Ir(e, t) {
+	U(() => localStorage.setItem(e, JSON.stringify(t)), void 0);
+}
+async function Lr(e, t = "all") {
+	let n = $metrix.caniuse;
+	if (typeof n != "function") return e;
+	let r = t === "inbox" ? br : yr, i = await Promise.all(r.map(([, e]) => n(e).catch(() => !1))), a = { ...e };
+	return r.forEach(([e], t) => {
+		a[e] = i[t] ?? !1;
+	}), a;
+}
+// src/beszel/client.ts
+var Rr = 27e5, zr = 1e4, Br = class extends Error {
+	kind;
+	detail;
+	constructor(e, t) {
+		super(t || e), this.kind = e, this.detail = t;
+	}
+};
+function Vr(e) {
+	return e instanceof Br ? {
+		kind: e.kind,
+		detail: e.detail
+	} : {
+		kind: "connect",
+		detail: Sr(e)
+	};
+}
+function Hr(e) {
+	let t = e.trim(), n = cr(/^https?:\/\//i.test(t) ? t : `http://${t}`);
+	return `${n.protocol}//${n.host}`;
+}
+async function Ur(e, t = {}, n = zr) {
+	t.signal?.throwIfAborted();
+	let r = new AbortController(), i = () => r.abort(t.signal?.reason);
+	t.signal?.addEventListener("abort", i, { once: !0 });
+	let a = setTimeout(() => r.abort(), n), o;
+	try {
+		if (o = await fetch(e, {
+			...t,
+			signal: r.signal
+		}), !o.ok) return o.body?.cancel?.().catch(() => {}), {
+			status: o.status,
+			ok: !1
+		};
+		let n = await o.json();
+		return {
+			status: o.status,
+			ok: !0,
+			data: n
+		};
+	} catch (e) {
+		throw o?.body?.cancel?.().catch(() => {}), e;
+	} finally {
+		clearTimeout(a), t.signal?.removeEventListener("abort", i);
+	}
+}
+function Wr(e) {
+	let t = { status: "idle" }, n = 0;
+	function r() {
+		n++, t = { status: "idle" };
+	}
+	function i(r) {
+		if (t.status === "ready" && Date.now() < t.expiresAt) return Promise.resolve(t.token);
+		if (t.status === "authenticating") return t.promise;
+		let i = n, { baseUrl: a, email: o, password: s } = e(), c = (async () => {
+			let e = await Ur(or(a, "/api/collections/users/auth-with-password"), {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					identity: o,
+					password: s
+				}),
+				signal: r
+			});
+			if (e.status === 400 || e.status === 401) throw new Br("auth", "");
+			if (!e.ok) throw new Br("http", `HTTP ${e.status}`);
+			if (!e.data?.token) throw new Br("auth", "");
+			return i === n && (t = {
+				status: "ready",
+				token: e.data.token,
+				expiresAt: Date.now() + Rr
+			}), e.data.token;
+		})().catch((e) => {
+			throw i === n && t.status === "authenticating" && t.gen === i && (t = { status: "idle" }), e;
+		});
+		return t = {
+			status: "authenticating",
+			promise: c,
+			gen: i
+		}, c;
+	}
+	async function a(n, r, a) {
+		let { baseUrl: o } = e(), s = r ? ir(or(o, n), r) : or(o, n), c = (e) => Ur(s, {
+			headers: { Authorization: `Bearer ${e}` },
+			signal: a
+		}), l = await i(a), u = await c(l);
+		if (u.status === 401 && (t.status === "ready" && t.token === l && (t = { status: "idle" }), l = await i(a), u = await c(l)), !u.ok) throw new Br("http", `HTTP ${u.status}`);
+		return u.data;
+	}
+	function o(e, t, n, r) {
+		return a(e, n, r).catch(() => t);
+	}
+	return {
+		get: a,
+		optionalGet: o,
+		reset: r
+	};
+}
+// src/beszel/types.ts
+var Gr = {
+	"1h": {
+		ms: 36e5,
+		type: "1m",
+		perPage: 120,
+		labelZh: "1小时",
+		labelEn: "1h"
+	},
+	"12h": {
+		ms: 432e5,
+		type: "10m",
+		perPage: 120,
+		labelZh: "12小时",
+		labelEn: "12h"
+	},
+	"24h": {
+		ms: 864e5,
+		type: "20m",
+		perPage: 120,
+		labelZh: "24小时",
+		labelEn: "24h"
+	},
+	"7d": {
+		ms: 6048e5,
+		type: "120m",
+		perPage: 120,
+		labelZh: "7天",
+		labelEn: "7d"
+	}
+}, Kr = 3e4;
+function qr(e, t) {
+	let n = /* @__PURE__ */ new Map(), r = 0, i = null, a = (e, n) => `${t.getConnectionKey()}|${e}|${n}`;
+	function o() {
+		r++, i?.abort(), i = null, t.setLoading(!1);
+	}
+	function s() {
+		o(), n.clear();
+	}
+	async function c(o, s, c = {}) {
+		if (!t.hasSystem(o)) return;
+		i?.abort();
+		let l = new AbortController();
+		i = l;
+		let { signal: u } = l, d = ++r, f = t.getConnectionKey(), p = a(o, s), m = n.get(p), h = t.getCurrentDetail();
+		m && (h?.id !== o || h.period !== s) && t.setDetail(m), !c.silent && !m && t.setLoading(!0);
+		let g = () => {
+			let e = t.getActiveTarget();
+			return !u.aborted && d === r && o === e.id && s === e.period && f === t.getConnectionKey();
+		}, _ = Gr[s], v = `system="${o}" && created > "${new Date(Date.now() - _.ms).toISOString().slice(0, 19).replace("T", " ")}"`, y = (e) => {
+			if (!g()) return;
+			let r = {
+				...t.getCurrentDetail()?.id === o && t.getCurrentDetail()?.period === s ? t.getCurrentDetail() : m ?? {
+					id: o,
+					period: s,
+					points: [],
+					details: null,
+					containers: [],
+					services: [],
+					smartDevices: [],
+					error: "",
+					loadedAt: 0
+				},
+				...e,
+				id: o,
+				period: s,
+				loadedAt: Date.now()
+			};
+			n.set(p, r), t.setDetail(r);
+		};
+		try {
+			let n = !1, r, i, a = (async () => {
+				let a = {
+					perPage: _.perPage,
+					skipTotal: 1,
+					sort: "created",
+					fields: "created,stats",
+					filter: `${v} && type="${_.type}"`
+				}, o = (await e.get("/api/collections/system_stats/records", a, u)).items ?? [];
+				o.length === 0 && g() && (o = (await e.get("/api/collections/system_stats/records", {
+					...a,
+					filter: v
+				}, u)).items ?? []), g() && (n = !0, y({
+					points: o,
+					error: "",
+					...r === void 0 ? {} : { containers: r },
+					...i === void 0 ? {} : { details: i }
+				}), r = void 0, i = void 0, t.setLoading(!1));
+			})(), s = e.optionalGet("/api/collections/containers/records", { items: [] }, {
+				perPage: 50,
+				skipTotal: 1,
+				sort: "name",
+				fields: "id,name,image,status,cpu,memory,net,health",
+				filter: `system="${o}"`
+			}, u).then((e) => {
+				let t = e.items ?? [];
+				n ? y({ containers: t }) : r = t;
+			}), c = e.optionalGet(`/api/collections/system_details/records/${encodeURIComponent(o)}`, null, void 0, u).then((e) => {
+				let t = e && typeof e == "object" ? e : null;
+				n ? y({ details: t }) : i = t;
+			});
+			if (await Promise.all([
+				a,
+				s,
+				c
+			]), !g()) return;
+			let [l, d] = await Promise.all([e.optionalGet("/api/collections/systemd_services/records", { items: [] }, {
+				perPage: 50,
+				skipTotal: 1,
+				sort: "name",
+				filter: `system="${o}"`
+			}, u), e.optionalGet("/api/collections/smart_devices/records", { items: [] }, {
+				perPage: 20,
+				skipTotal: 1,
+				sort: "name",
+				filter: `system="${o}"`
+			}, u)]), f = l.items ?? [], p = d.items ?? [], m = t.getCurrentDetail();
+			(f.length > 0 || p.length > 0 || (m?.services.length ?? 0) > 0 || (m?.smartDevices.length ?? 0) > 0) && y({
+				services: f,
+				smartDevices: p
+			});
+		} catch (e) {
+			if (!g()) return;
+			let { kind: n, detail: r } = Vr(e);
+			t.onError(n, r), y({ error: H(t.getLang(), "历史加载失败", "Failed to load history") });
+		} finally {
+			d === r && (t.setLoading(!1), i === l && (i = null));
+		}
+	}
+	function l(e, r) {
+		let i = n.get(a(e, r));
+		return i ? (t.setDetail(i), Date.now() - i.loadedAt < Kr ? (t.setLoading(!1), Promise.resolve()) : c(e, r, { silent: !0 })) : (t.setDetail(null), c(e, r));
+	}
+	return {
+		open: l,
+		load: c,
+		cancel: o,
+		clear: s
+	};
+}
+// node_modules/.pnpm/pretty-bytes@7.2.0/node_modules/pretty-bytes/index.js
+var Jr = [
+	[
+		"B",
+		"kB",
+		"MB",
+		"GB",
+		"TB",
+		"PB",
+		"EB",
+		"ZB",
+		"YB"
+	],
+	[
+		"B",
+		"KiB",
+		"MiB",
+		"GiB",
+		"TiB",
+		"PiB",
+		"EiB",
+		"ZiB",
+		"YiB"
+	],
+	[
+		"b",
+		"kbit",
+		"Mbit",
+		"Gbit",
+		"Tbit",
+		"Pbit",
+		"Ebit",
+		"Zbit",
+		"Ybit"
+	],
+	[
+		"b",
+		"kibit",
+		"Mibit",
+		"Gibit",
+		"Tibit",
+		"Pibit",
+		"Eibit",
+		"Zibit",
+		"Yibit"
+	]
+], Yr = (e) => {
+	if (e >= 1e-6 && e < 1e21) return String(e);
+	let [t, n] = e.toExponential().split("e"), r = t.replace(".", ""), i = Number(n) + 1, a = i > 0, o = a ? r.padEnd(i, "0") : "0".repeat(1 - i) + r, s = o.slice(0, a ? i : 1), c = o.slice(a ? i : 1).replace(/0+$/, "");
+	return c ? `${s}.${c}` : s;
+}, Xr = (e, t, n) => {
+	if (typeof t == "string" || Array.isArray(t) || t === !0) {
+		let r = t === !0 ? void 0 : t;
+		if (n !== void 0) return e.toLocaleString(r, n);
+		let i = Yr(e), a = i.indexOf("."), o = a === -1 ? 0 : i.length - a - 1;
+		return o > 100 ? i : e.toLocaleString(r, { maximumFractionDigits: o });
+	}
+	return n === void 0 ? Yr(e) : e.toLocaleString("en-US", {
+		...n,
+		useGrouping: !1
+	});
+}, Zr = (e) => {
+	if (typeof e == "number") return Math.log10(e);
+	let t = e.toString(10);
+	return t.length + Math.log10(`0.${t.slice(0, 15)}`);
+}, Qr = (e) => typeof e == "number" ? Math.log(e) : Zr(e) * Math.log(10), $r = (e, t, n) => {
+	let r = t ** n;
+	if (typeof e == "number" || e <= 2 ** 53 - 1) return Number(e) / r;
+	let i = BigInt(t) ** BigInt(n), a = e / i, o = e % i;
+	return Number(a) + Number(o) / r;
+}, ei = (e, t, n, r) => {
+	let i = BigInt(t) ** BigInt(n), a = e / i;
+	if (r === void 0) return a.toString();
+	let o = r.minimumFractionDigits ?? 0, s = Math.max(r.maximumFractionDigits ?? 3, o), c = (e % i * 10n ** BigInt(s) / i).toString().padStart(s, "0").replace(/0+$/, "").padEnd(o, "0");
+	return c ? `${a}.${c}` : a.toString();
+}, ti = (e, t) => e < 0 ? "-" : t ? e === 0 || e === 0n ? " " : "+" : "", ni = (e) => {
+	if (e !== void 0 && (typeof e != "number" || !Number.isSafeInteger(e) || e < 0)) throw TypeError(`Expected fixedWidth to be a non-negative integer, got ${typeof e}: ${e}`);
+}, ri = (e, t) => {
+	if (t !== void 0 && (typeof t != "number" || !Number.isInteger(t) || t < 0 || t > 100)) throw TypeError(`Expected ${e} to be an integer between 0 and 100, got ${typeof t}: ${t}`);
+}, ii = (e) => {
+	let { minimumFractionDigits: t, maximumFractionDigits: n } = e;
+	if (t !== void 0 || n !== void 0) {
+		if (ri("minimumFractionDigits", t), ri("maximumFractionDigits", n), t > n) throw RangeError(`Expected minimumFractionDigits (${t}) to not be greater than maximumFractionDigits (${n})`);
+		return {
+			...t !== void 0 && { minimumFractionDigits: t },
+			...n !== void 0 && { maximumFractionDigits: n },
+			roundingMode: "trunc"
+		};
+	}
+};
+function ai(e, t) {
+	if (typeof e != "bigint" && !Number.isFinite(e)) throw TypeError(`Expected a finite number, got ${typeof e}: ${e}`);
+	t = {
+		bits: !1,
+		binary: !1,
+		space: !0,
+		nonBreakingSpace: !1,
+		...t
+	}, ni(t.fixedWidth);
+	let n = ii(t), r = Jr[(t.bits ? 2 : 0) + +!!t.binary], i = t.space ? t.nonBreakingSpace ? "\xA0" : " " : "";
+	Object.is(e, -0) && (e = 0);
+	let a = ti(e, t.signed);
+	e < 0 && (e = -e);
+	let o = t.binary ? 1024 : 1e3, s = 0;
+	e >= 1 && (s = Math.min(Math.floor(t.binary ? Qr(e) / Math.log(o) : Zr(e) / 3), r.length - 1));
+	let c = $r(e, o, s), l;
+	if (Number.isFinite(c)) {
+		if (e = c, e < 1 && s > 0 && (e *= o, --s), !n) {
+			let t = Math.max(3, Math.floor(e).toString().length);
+			e = Number(e.toPrecision(t)), e >= o && s < r.length - 1 && (e /= o, s += 1);
+		}
+		l = Xr(e, t.locale, n);
+	} else l = ei(e, o, s, n);
+	return (a + l + i + r[s]).padStart(t.fixedWidth ?? 0);
+}
+// node_modules/.pnpm/es-toolkit@1.53.1/node_modules/es-toolkit/dist/array/maxBy.mjs
+function oi(e, t) {
+	if (e.length === 0) return;
+	let n = e[0], r = -Infinity;
+	for (let i = 0; i < e.length; i++) {
+		let a = e[i], o = t(a, i, e);
+		if (Number.isNaN(o)) return a;
+		o > r && (r = o, n = a);
+	}
+	return n;
+}
+// node_modules/.pnpm/es-toolkit@1.53.1/node_modules/es-toolkit/dist/_internal/compareValues.mjs
+function si(e) {
+	return Number.isNaN(e) ? 1 : e === null ? 2 : e === void 0 ? 3 : 0;
+}
+function ci(e, t) {
+	let n = si(e), r = si(t);
+	return n < r ? -1 : n > r ? 1 : n === 0 ? e < t ? -1 : +(e > t) : 0;
+}
+function li(e, t, n) {
+	return n === "asc" ? ci(e, t) : ci(t, e);
+}
+// node_modules/.pnpm/es-toolkit@1.53.1/node_modules/es-toolkit/dist/array/orderBy.mjs
+function ui(e, t, n) {
+	return e.slice().sort((e, r) => {
+		let i = n.length;
+		for (let a = 0; a < t.length; a++) {
+			let o = i > a ? n[a] : n[i - 1], s = t[a], c = typeof s == "function", l = li(c ? s(e) : e[s], c ? s(r) : r[s], o);
+			if (l !== 0) return l;
+		}
+		return 0;
+	});
+}
+// node_modules/.pnpm/es-toolkit@1.53.1/node_modules/es-toolkit/dist/_internal/globalThis.mjs
+var di = typeof globalThis == "object" && globalThis || typeof window == "object" && window || typeof self == "object" && self || typeof global == "object" && global || (function() {
+	return this;
+})(), fi = di.DOMException === void 0 ? Error : di.DOMException, pi = class extends fi {
+	constructor(e = "The operation was aborted") {
+		super(e);
+	}
+};
+// node_modules/.pnpm/es-toolkit@1.53.1/node_modules/es-toolkit/dist/promise/delay.mjs
+function mi(e, { signal: t } = {}) {
+	return new Promise((n, r) => {
+		let i = () => {
+			r(new pi());
+		}, a = () => {
+			clearTimeout(o), i();
+		};
+		if (t?.aborted) return i();
+		let o = setTimeout(() => {
+			t?.removeEventListener("abort", a), n();
+		}, e);
+		t?.addEventListener("abort", a, { once: !0 });
+	});
+}
+// node_modules/.pnpm/es-toolkit@1.53.1/node_modules/es-toolkit/dist/math/clamp.mjs
+function hi(e, t, n) {
+	return n == null ? Math.min(e, t) : Math.min(Math.max(e, t), n);
+}
+// src/beszel/metrics.ts
+var gi = 1048576;
+function _i(e) {
+	return typeof e == "number" && Number.isFinite(e) && e >= 0 ? e : null;
+}
+function vi(e) {
+	return e ? Array.isArray(e.la) && e.la.length >= 3 && e.la.every(Number.isFinite) ? [
+		e.la[0],
+		e.la[1],
+		e.la[2]
+	] : typeof e.l1 == "number" && typeof e.l5 == "number" && typeof e.l15 == "number" && [
+		e.l1,
+		e.l5,
+		e.l15
+	].every(Number.isFinite) ? [
+		e.l1,
+		e.l5,
+		e.l15
+	] : null : null;
+}
+function yi(e) {
+	if (!e) return null;
+	let t = _i(e.bb);
+	if (t !== null) return t;
+	let n = _i(e.b);
+	return n === null ? null : n * gi;
+}
+function bi(e, t, n) {
+	if (Array.isArray(e) && e.length >= 2) return [_i(Number(e[0])), _i(Number(e[1]))];
+	let r = _i(t), i = _i(n);
+	return [r === null ? null : r * gi, i === null ? null : i * gi];
+}
+function xi(e) {
+	if (!e) return {
+		sent: null,
+		recv: null
+	};
+	let [t, n] = bi(e.b, e.ns, e.nr);
+	return {
+		sent: t,
+		recv: n
+	};
+}
+function Si(e) {
+	if (!e) return {
+		read: null,
+		write: null
+	};
+	let [t, n] = bi(e.dio, e.dr, e.dw);
+	return {
+		read: t,
+		write: n
+	};
+}
+function Ci(e, t) {
+	let n = (e.status || "").toLowerCase();
+	return e.health === 3 || n.includes("unhealthy") ? {
+		tone: "danger",
+		bad: !0,
+		label: H(t, "异常", "unhealthy")
+	} : n.includes("exited") || n.includes("dead") || n.includes("restarting") ? {
+		tone: "danger",
+		bad: !0,
+		label: e.status || H(t, "停止", "stopped")
+	} : e.health === 1 || n.includes("starting") ? {
+		tone: "warning",
+		bad: !0,
+		label: H(t, "启动中", "starting")
+	} : e.health === 2 || n.includes("healthy") ? {
+		tone: "success",
+		bad: !1,
+		label: H(t, "健康", "healthy")
+	} : n.startsWith("up") || n === "running" ? {
+		tone: "success",
+		bad: !1,
+		label: e.status || H(t, "运行中", "running")
+	} : {
+		tone: "muted",
+		bad: !1,
+		label: e.status || "—"
+	};
+}
+function wi(e, t) {
+	return ui(e, [(e) => +!Ci(e, t).bad, (e) => e.cpu ?? 0], ["asc", "desc"]);
+}
+function Ti(e) {
+	let t = String(e.state ?? "").toLowerCase(), n = String(e.sub ?? "").toLowerCase();
+	return t === "failed" || t === "3" || n === "failed";
+}
+function Ei(e) {
+	let t = (e.state || "").toUpperCase();
+	return t === "FAILED" || t === "FAILING" || t === "CRITICAL";
+}
+function Di(e, t) {
+	let n = e.info;
+	return !n || e.status !== "up" ? null : oi([
+		{
+			dim: "cpu",
+			label: "CPU",
+			value: n.cpu
+		},
+		{
+			dim: "mem",
+			label: H(t, "内存", "memory"),
+			value: n.mp
+		},
+		{
+			dim: "disk",
+			label: H(t, "磁盘", "disk"),
+			value: n.dp
+		}
+	].filter((e) => Number.isFinite(e.value)), (e) => e.value) ?? null;
+}
+function Oi(e) {
+	let t = 0, n = 0, r = 0, i = 0, a = 0, o = 0, s = 0, c = 0;
+	for (let l of e) if (l.status === "up") {
+		if (t++, l.info) {
+			Number.isFinite(l.info.cpu) && Number.isFinite(l.info.mp) && (a += l.info.cpu, o += l.info.mp, s++);
+			let e = yi(l.info);
+			e !== null && (c += e);
+		}
+	} else l.status === "down" ? n++ : l.status === "pending" ? r++ : i++;
+	return {
+		total: e.length,
+		up: t,
+		down: n,
+		pending: r,
+		paused: i,
+		avgCpu: s > 0 ? a / s : 0,
+		avgMem: s > 0 ? o / s : 0,
+		totalBandwidthBytes: c
+	};
+}
+function ki(e, t, n) {
+	let r = {
+		down: 0,
+		pending: 1,
+		up: 2,
+		paused: 3
+	};
+	return t === "severity" ? ui(e, [
+		(e) => {
+			if (e.status === "up" && e.info) {
+				let t = Math.max(e.info.cpu, e.info.mp, e.info.dp);
+				if (t >= 90) return .5;
+				if (t >= 65) return 1.5;
+			}
+			return r[e.status];
+		},
+		(e) => e.status === "up" && e.info ? Math.max(e.info.cpu, e.info.mp, e.info.dp) : 0,
+		(e) => e.name.toLowerCase()
+	], [
+		"asc",
+		"desc",
+		"asc"
+	]) : ui(e, [
+		(e) => e.status === "up" ? 0 : 1,
+		(e) => t === "name" ? e.name.toLowerCase() : e.status !== "up" || !e.info ? -1 : t === "cpu" ? e.info.cpu : t === "mem" ? e.info.mp : t === "disk" ? e.info.dp : yi(e.info) ?? -1,
+		(e) => e.name.toLowerCase()
+	], [
+		"asc",
+		n ? "desc" : "asc",
+		"asc"
+	]);
+}
+function Ai(e) {
+	let t = e.toLowerCase();
+	return t.includes("status") || t.includes("offline") || t.includes("down") ? "status" : t.includes("cpu") ? "cpu" : t.includes("mem") ? "mem" : t.includes("disk") ? "disk" : "";
+}
+function ji(e, t, n, r) {
+	let i = [], a = new Map(e.map((e) => [e.id, e])), o = /* @__PURE__ */ new Set(), s = /* @__PURE__ */ new Set();
+	for (let t of e) t.status === "down" && (o.add(t.id), i.push({
+		id: `offline-${t.id}`,
+		kind: "offline",
+		severity: "critical",
+		title: t.name,
+		detail: H(r, "离线", "Down"),
+		systemId: t.id
+	}));
+	for (let e of t) {
+		if (!e.triggered) continue;
+		let t = Ai(e.name);
+		if (t === "status" && o.has(e.system)) continue;
+		t && s.add(`${e.system}:${t}`);
+		let n = a.get(e.system), c = n?.status === "up" && n.info ? t === "cpu" ? n.info.cpu : t === "mem" ? n.info.mp : t === "disk" ? n.info.dp : void 0 : void 0, l = c !== void 0 && Number.isFinite(c) ? `${Math.round(c)}%` : e.value === void 0 ? H(r, "告警", "Alert") : `≥ ${e.value}`;
+		i.push({
+			id: `alert-${e.id}`,
+			kind: "alert",
+			severity: "critical",
+			title: `${n?.name ?? e.system} · ${e.name}`,
+			detail: l,
+			systemId: e.system
+		});
+	}
+	if (n > 0) for (let t of e) {
+		let e = Di(t, r);
+		!e || e.value < n || s.has(`${t.id}:${e.dim}`) || i.push({
+			id: `threshold-${t.id}`,
+			kind: "threshold",
+			severity: e.value >= 90 ? "critical" : "warning",
+			title: `${t.name} · ${e.label}`,
+			detail: `${Math.round(e.value)}%`,
+			systemId: t.id
+		});
+	}
+	for (let t of e) t.status === "up" && t.info?.sv && t.info.sv[1] > 0 && i.push({
+		id: `service-${t.id}`,
+		kind: "service",
+		severity: "warning",
+		title: `${t.name} · Systemd`,
+		detail: H(r, `${t.info.sv[1]} 失败`, `${t.info.sv[1]} failed`),
+		systemId: t.id
+	}), t.status === "pending" && i.push({
+		id: `pending-${t.id}`,
+		kind: "pending",
+		severity: "warning",
+		title: t.name,
+		detail: H(r, "等待连接", "Pending"),
+		systemId: t.id
+	});
+	return i;
+}
+// src/beszel/format.ts
+var Mi = 1024, Ni = Mi * 1024, Pi = Ni * 1024;
+function Fi(e) {
+	return typeof e == "number" && Number.isFinite(e) && e >= 0 ? e : null;
+}
+function Ii(e, t = {}) {
+	let n = ai(Math.max(0, e), {
+		binary: !0,
+		space: !t.compact,
+		...t.maxDigits === void 0 ? {} : { maximumFractionDigits: t.maxDigits }
+	});
+	return t.compact ? n.replace(/iB$/, "") : n.replace(/iB$/, "B");
+}
+function Li(e) {
+	if (typeof e == "number") return e;
+	let t = e.includes("T") ? e : e.replace(" ", "T");
+	return Date.parse(/[zZ]$|[+-]\d\d:?\d\d$/.test(t) ? t : `${t}Z`);
+}
+function Ri(e) {
+	return e === "up" ? "success" : e === "down" ? "danger" : e === "paused" ? "muted" : "warning";
+}
+function zi(e, t) {
+	return e === "up" ? H(t, "在线", "up") : e === "down" ? H(t, "离线", "down") : e === "paused" ? H(t, "已暂停", "paused") : H(t, "等待连接", "pending");
+}
+function Bi(e) {
+	return e >= 90 ? "danger" : e >= 65 ? "warning" : "success";
+}
+function Vi(e, t) {
+	if (!e || !Number.isFinite(e) || e <= 0) return "—";
+	let n = Math.floor(e / 86400), r = Math.floor(e % 86400 / 3600), i = Math.floor(e % 3600 / 60);
+	return n > 0 ? H(t, `${n}天${r}时`, `${n}d ${r}h`) : r > 0 ? H(t, `${r}时${i}分`, `${r}h ${i}m`) : H(t, `${Math.max(1, i)}分钟`, `${Math.max(1, i)}m`);
+}
+function W(e, t = !1) {
+	return e == null || !Number.isFinite(e) ? "—" : `${Ii(e, { compact: t })}/s`;
+}
+function Hi(e) {
+	return e == null || !Number.isFinite(e) ? "—" : Ii(e, {
+		compact: !0,
+		maxDigits: 1
+	});
+}
+function Ui(e) {
+	return e >= Pi ? {
+		unit: "GB/s",
+		divisor: Pi
+	} : e >= Ni ? {
+		unit: "MB/s",
+		divisor: Ni
+	} : e >= Mi ? {
+		unit: "KB/s",
+		divisor: Mi
+	} : {
+		unit: "B/s",
+		divisor: 1
+	};
+}
+function Wi(e) {
+	let t = Fi(e);
+	return t === null ? "—" : Ii(t * Ni);
+}
+function Gi(e) {
+	let t = Fi(e);
+	return t === null ? "—" : Ii(t * Pi);
+}
+function Ki(e, t, n) {
+	let r = e.info, i = t?.details, a = vi(r), o = yi(r);
+	return [
+		`${e.name} (${zi(e.status, n)})`,
+		e.host || i?.hostname || r?.h ? `Host: ${e.host || i?.hostname || r?.h}` : "",
+		r && e.status === "up" ? `CPU ${Math.round(r.cpu)}% | MEM ${Math.round(r.mp)}% | DISK ${Math.round(r.dp)}%` : "",
+		o === null ? "" : `Net: ${W(o)}`,
+		a ? `Load: ${a.map((e) => e.toFixed(2)).join(" / ")}` : "",
+		r?.u ? `Uptime: ${Vi(r.u, n)}` : "",
+		i?.os_name || i?.kernel || r?.k ? `OS: ${[i?.os_name, i?.kernel || r?.k].filter(Boolean).join(" · ")}` : ""
+	].filter(Boolean).join("\n");
+}
+// src/domain/alerts.ts
+var qi = 18e5, Ji = 18e4;
+function Yi(e, t, n, r, i) {
+	let a = /* @__PURE__ */ new Set(), o = /* @__PURE__ */ new Set(), s = [];
+	for (let c of e) {
+		if (c.status === "down") {
+			a.add(c.id), t.has(c.id) || s.push({
+				key: c.id,
+				tag: `beszel-sys-${c.id}`,
+				title: H(i, "主机离线", "Server down"),
+				body: c.name,
+				activityKey: `down-${c.id}`
+			});
+			continue;
+		}
+		let e = r > 0 ? Di(c, i) : null;
+		if (e && e.value >= r) {
+			let t = `${c.id}:${e.label}`;
+			o.add(t), n.has(t) || s.push({
+				key: t,
+				tag: `beszel-sys-${t}`,
+				title: `${c.name} ${e.label} ${Math.round(e.value)}%`,
+				body: H(i, `达到 ${r}% 告警阈值`, `Reached ${r}% alert threshold`),
+				activityKey: `hot-${c.id}`
+			});
+		}
+	}
+	return {
+		nextDown: a,
+		nextHot: o,
+		transitions: s
+	};
+}
+function Xi(e) {
+	let t = /* @__PURE__ */ new Set(), n = /* @__PURE__ */ new Set(), r = /* @__PURE__ */ new Map(), i = 0;
+	function a() {
+		t = /* @__PURE__ */ new Set(), n = /* @__PURE__ */ new Set(), e.setNotchActivity(null);
+	}
+	function o(t) {
+		e.canNotchActivity() && (e.setNotchActivity({
+			id: `beszel-${++i}-${t}`,
+			expiresAt: Date.now() + Ji
+		}), e.canNotchSetState() && jr(6e3));
+	}
+	function s(t, n, i, a) {
+		Date.now() - (r.get(t) ?? 0) < qi || Pr(n, i, a, () => e.onNotificationClick(a)) && r.set(t, Date.now());
+	}
+	function c(e, r, i, a) {
+		let { nextDown: c, nextHot: l, transitions: u } = Yi(e, t, n, r, a);
+		if (t = c, n = l, u.length !== 0 && (o(u[0].activityKey), i)) for (let e of u) s(e.key, e.title, e.body, e.tag);
+	}
+	function l(e, t, n) {
+		o(`inbox-${e.key}`), t && s(`inbox-${e.key}`, H(n, "Beszel 告警消息", "Beszel Alert"), e.title, `beszel-inbox-${e.key}`);
+	}
+	return {
+		processFleet: c,
+		processInboxAlert: l,
+		reset: a
+	};
+}
+// src/inbox/parser.ts
+function Zi(e, t) {
+	let n = e.toLowerCase();
+	return t.find((e) => e.name && n.includes(e.name.toLowerCase()) || e.host && n.includes(e.host.toLowerCase()));
+}
+function Qi(e) {
+	let t = e.toLowerCase();
+	return /(down|offline|critical|fail|error|离线|故障|失败|告警)/.test(t) ? "critical" : /(resolved|recovered|online|up|恢复|正常)/.test(t) ? "info" : "warning";
+}
+function $i(e) {
+	return e.find((e) => typeof e == "string" && e.trim().length > 0)?.trim();
+}
+function ea(e, t, n = !1) {
+	let r = (e || "").trim();
+	if (!r) return {
+		title: t,
+		body: ""
+	};
+	if (r.startsWith("{") && r.endsWith("}")) {
+		let e = gr(r);
+		if (e && typeof e == "object" && !Array.isArray(e)) {
+			let r = e, i = $i([r.title, r.subject]), a = $i([
+				r.message,
+				r.text,
+				r.body,
+				r.content
+			]);
+			if (i || a) {
+				let e = n && i ? i : t;
+				return {
+					title: e,
+					body: a || (i && i !== e ? i : "")
+				};
+			}
+		}
+	}
+	if (n) {
+		let e = r.split(/\r?\n/).map((e) => e.trim()).filter(Boolean);
+		if (e.length > 0) return {
+			title: e[0].length > 96 ? `${e[0].slice(0, 95)}…` : e[0],
+			body: e.slice(1).join("\n").trim() || r
+		};
+	}
+	return {
+		title: t,
+		body: r
+	};
+}
+// src/inbox/service.ts
+var ta = 3, na = 40;
+async function ra(e, t) {
+	for (let n = 0; n < 3; n++) try {
+		return await e();
+	} catch (e) {
+		if (Sr(e).toLowerCase().includes("busy") && n < 2) {
+			await mi(t);
+			continue;
+		}
+		throw e;
+	}
+	throw Error("inbox busy");
+}
+function ia(e) {
+	let t = 0, n = 0, r = !1, i = (t) => e.getBusyMap()[t] === "deleting", a = () => Object.keys(e.getBusyMap()).length > 0;
+	function o() {
+		n++, t = 0, r = !1;
+	}
+	function s(e) {
+		return t === 0 || Date.now() - t > e;
+	}
+	async function c(t, n = {}) {
+		if (!t.loaded && e.getCaps().inboxMessage && $metrix.inbox) {
+			n.silent || e.setItemBusy(t.key, "loading");
+			try {
+				let n = ea((await ra(() => $metrix.inbox.message(t.inboxId, t.seq), 300)).text || "", t.title, !!t.fallbackTitle), r = Zi(`${n.title} ${n.body}`, e.getSystems());
+				e.setAlerts(e.getAlerts().map((e) => e.key === t.key ? {
+					...e,
+					title: n.title,
+					fallbackTitle: !1,
+					body: n.body,
+					severity: Qi(`${n.title} ${n.body}`),
+					systemId: r?.id ?? e.systemId,
+					systemName: r?.name ?? e.systemName,
+					loaded: !0
+				} : e));
+			} catch {} finally {
+				!n.silent && e.getBusyMap()[t.key] === "loading" && e.setItemBusy(t.key, null);
+			}
+		}
+	}
+	async function l() {
+		if (!r && e.getCaps().inboxMessage && $metrix.inbox) {
+			r = !0;
+			try {
+				let t = e.getAlerts().filter((e) => !e.loaded && !i(e.key)).slice(0, ta);
+				for (let n of t) {
+					if (a()) break;
+					let t = e.getAlerts().find((e) => e.key === n.key);
+					t && !t.loaded && await c(t, { silent: !0 });
+				}
+			} finally {
+				r = !1;
+			}
+		}
+	}
+	async function u(r) {
+		if (!$metrix.inbox) return;
+		let a = ++n, o = await e.syncInboxCaps();
+		if (a === n) {
+			if (!o.inboxBoxes || !o.inboxList) e.setBoundCount(0), e.setAlerts([]);
+			else try {
+				let o = await $metrix.inbox.boxes();
+				if (a !== n) return;
+				if (e.setBoundCount(o.length), !o.length) {
+					e.setAlerts([]);
+					return;
+				}
+				let s = r?.length ? o.filter((e) => r.includes(e.id)) : o, c = [];
+				for (let e of s) {
+					let t = await $metrix.inbox.list(e.id, { limit: 20 });
+					if (a !== n) return;
+					c.push({
+						box: e,
+						items: t
+					});
+				}
+				if (a !== n) return;
+				let u = e.getAlerts(), d = new Map(u.map((e) => [e.key, e])), f = r?.length ? u.filter((e) => !r.includes(e.inboxId) && !i(e.key)) : [], p = null, m = e.getReadKeys(), h = e.getSystems();
+				for (let { box: e, items: n } of c) for (let r of n) {
+					let n = `${e.id}:${r.seq}`;
+					if (i(n)) continue;
+					let a = d.get(n), o = r.subject?.trim() || "", s = !o, c = o || `${e.name || "Beszel"} #${r.seq}`, l = a?.loaded && !a.fallbackTitle ? a.title : c, u = Zi(`${l} ${a?.body || ""}`, h), g = a ? {
+						...a,
+						title: l,
+						fallbackTitle: a.loaded ? a.fallbackTitle : s,
+						systemId: u?.id ?? a.systemId,
+						systemName: u?.name ?? a.systemName
+					} : {
+						key: n,
+						inboxId: e.id,
+						seq: r.seq,
+						source: r.source,
+						title: l,
+						fallbackTitle: s,
+						body: "",
+						sender: r.sender || "",
+						receivedAt: r.received_at,
+						severity: Qi(c),
+						systemId: u?.id,
+						systemName: u?.name,
+						loaded: !1
+					};
+					!a && t > 0 && !m.has(n) && (p = g), f.push(g);
+				}
+				f.sort((e, t) => t.receivedAt - e.receivedAt), e.setAlerts(f.slice(0, na)), t = Date.now(), p && e.onNewAlert(p), l();
+			} catch {}
+		}
+	}
+	async function d(t) {
+		if (!$metrix.inbox || i(t.key)) return;
+		e.setItemBusy(t.key, "deleting"), n++;
+		let r = e.getLang();
+		try {
+			if (!(await e.syncInboxCaps()).inboxRemove) {
+				Or(H(r, "无删除权限，请在收件箱绑定中开启管理权限", "Enable manage access in inbox settings to delete"));
+				return;
+			}
+			await ra(() => $metrix.inbox.remove(t.inboxId, t.seq), 350), e.setAlerts(e.getAlerts().filter((e) => e.key !== t.key)), e.getExpandedKey() === t.key && e.setExpandedKey(null), e.deleteReadKey(t.key);
+		} catch (e) {
+			let t = Sr(e);
+			kr("beszel inbox.remove failed:", t), Or(H(r, `删除失败：${t || "请重试"}`, `Delete failed: ${t || "try again"}`));
+		} finally {
+			e.getBusyMap()[t.key] === "deleting" && e.setItemBusy(t.key, null);
+		}
+	}
+	return {
+		refresh: u,
+		loadBody: c,
+		remove: d,
+		isStale: s,
+		reset: o
+	};
+}
+// src/ui/icons.ts
+var aa = {
+	server: "<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M3 7a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v2a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3zm0 8a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v2a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3zm4-7v.01M7 16v.01\"/>",
+	refresh: "<path fill=\"currentColor\" d=\"M5.463 4.433A9.96 9.96 0 0 1 12 2c5.523 0 10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228zm13.074 15.134A9.96 9.96 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772z\"/>",
+	external: "<path fill=\"currentColor\" d=\"M10 6v2H5v11h11v-5h2v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zm11-3v8h-2V6.413l-7.793 7.794l-1.414-1.414L17.585 5H13V3z\"/>",
+	back: "<path fill=\"currentColor\" d=\"M7.828 11H20v2H7.828l5.364 5.364l-1.414 1.414L4 12l7.778-7.778l1.414 1.414z\"/>",
+	bell: "<path fill=\"currentColor\" d=\"M20 17h2v2H2v-2h2v-7a8 8 0 1 1 16 0zm-2 0v-7a6 6 0 0 0-12 0v7zm-9 4h6v2H9z\"/>",
+	list: "<path fill=\"currentColor\" d=\"M8 4h13v2H8zM4.5 6.5a1.5 1.5 0 1 1 0-3a1.5 1.5 0 0 1 0 3m0 7a1.5 1.5 0 1 1 0-3a1.5 1.5 0 0 1 0 3m0 6.9a1.5 1.5 0 1 1 0-3a1.5 1.5 0 0 1 0 3M8 11h13v2H8zm0 7h13v2H8z\"/>",
+	grid: "<path fill=\"currentColor\" d=\"M21 3a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM11 13H4v6h7zm9 0h-7v6h7zm-9-8H4v6h7zm9 0h-7v6h7z\"/>",
+	clipboard: "<path fill=\"currentColor\" d=\"M7 4V2h10v2h3.007c.548 0 .993.445.993.993v16.014a.994.994 0 0 1-.993.993H3.993A.993.993 0 0 1 3 21.007V4.993C3 4.445 3.445 4 3.993 4zm0 2H5v14h14V6h-2v2H7zm2-2v2h6V4z\"/>",
+	check: "<path fill=\"currentColor\" d=\"m10 15.17l9.192-9.191l1.414 1.414L10 17.999l-6.364-6.364l1.414-1.414z\"/>",
+	alert: "<path fill=\"currentColor\" d=\"M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10s-4.477 10-10 10m0-2a8 8 0 1 0 0-16a8 8 0 0 0 0 16m-1-5h2v2h-2zm0-8h2v6h-2z\"/>",
+	trash: "<path fill=\"currentColor\" d=\"M17 6h5v2h-2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8H2V6h5V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1zm1 2H6v12h12zm-9 3h2v6H9zm4 0h2v6h-2zM9 4v2h6V4z\"/>"
+};
+// src/ui/kit.ts
+function G(e, t, ...n) {
+	let r = n.flat().filter((e) => e != null && e !== !1 && e !== !0);
+	return jn(e, t ?? null, r.length ? r : void 0);
+}
+function K(e, t = {}) {
+	return G("Text", {
+		text: e,
+		...t
+	});
+}
+var oa = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">";
+function sa(e) {
+	return oa + aa[e] + "</svg>";
+}
+function ca(e, t = 14, n) {
+	return G("Icon", {
+		svg: sa(e),
+		width: t,
+		height: t,
+		...n ? { textColor: n } : {}
+	});
+}
+function la(e) {
+	return new Date(e).toLocaleTimeString("zh-CN", {
+		hour: "2-digit",
+		minute: "2-digit",
+		hour12: !1
+	});
+}
+function ua(e, t) {
+	if (!e) return H(t, "从未", "never");
+	let n = Math.round((e - Date.now()) / 1e3), r = Math.abs(n), i = n > 0;
+	if (r < 45) return H(t, "刚刚", "just now");
+	let [a, o, s] = r < 3600 ? [
+		Math.round(r / 60),
+		"分钟",
+		"min"
+	] : r < 86400 ? [
+		Math.round(r / 3600),
+		"小时",
+		"hr"
+	] : [
+		Math.round(r / 86400),
+		"天",
+		"days"
+	];
+	return t === "zh" ? `${a} ${o}${i ? "后" : "前"}` : `${a} ${s} ${i ? "from now" : "ago"}`;
+}
+function da(e) {
+	let t = [], n = [];
+	for (let r of e) r.y !== null && Number.isFinite(r.y) ? n.push({
+		x: r.x,
+		y: r.y
+	}) : n.length && (t.push(n), n = []);
+	return n.length && t.push(n), t;
+}
+// src/domain/verdict.ts
+function fa(e, t) {
+	let n = e.slice(0, 2).map((e) => e.name).join(H(t, "、", ", "));
+	return e.length > 2 ? H(t, `${n} 等 ${e.length} 台`, `${n} +${e.length - 2}`) : n;
+}
+function pa(e, t, n) {
+	return e === "config" ? H(n, "请在设置中填写地址与账号", "Set server URL and account in settings") : e === "auth" ? H(n, "登录失败，请检查邮箱与密码", "Sign-in failed, check email and password") : e === "connect" ? H(n, "无法连接 Beszel，请检查地址与网络", "Cannot reach Beszel, check URL and network") : e === "http" ? H(n, `请求失败${t ? `（${t}）` : ""}`, `Request failed${t ? ` (${t})` : ""}`) : "";
+}
+function ma(e) {
+	let { systems: t, summary: n, errorKind: r, errorMessage: i, isInitialLoading: a, stale: o, updatedAt: s, lang: c } = e;
+	if (!t.length) return r ? {
+		text: i,
+		tone: "danger"
+	} : { text: a ? H(c, "加载中…", "Loading…") : H(c, "暂无主机", "No servers yet") };
+	let l = t.filter((e) => e.status === "down"), u = e.threshold || 90, d = t.filter((e) => (Di(e, c)?.value ?? 0) >= u), f = t.filter((e) => e.status === "pending"), p;
+	if (l.length) p = {
+		text: `${fa(l, c)} ${H(c, "离线", "down")}`,
+		tone: "danger"
+	};
+	else if (d.length) {
+		let e = Di(d[0], c);
+		p = {
+			text: `${d[0].name} ${e.label} ${Math.round(e.value)}%${d.length > 1 ? H(c, ` 等 ${d.length} 台`, ` +${d.length - 1}`) : ""}`,
+			tone: e.value >= 90 ? "danger" : "warning"
+		};
+	} else p = f.length ? {
+		text: H(c, `${f.length} 台等待连接`, `${f.length} pending`),
+		tone: "warning"
+	} : {
+		text: n.up === t.length ? H(c, `${n.up} 台全部在线`, `All ${n.up} up`) : H(c, `${n.up}/${t.length} 在线`, `${n.up}/${t.length} up`),
+		tone: "success"
+	};
+	return r ? {
+		text: `${p.text} · ${i}`,
+		tone: "warning"
+	} : o ? {
+		text: `${p.text} · ${H(c, `数据停在 ${la(s)}`, `as of ${la(s)}`)}`,
+		tone: "warning"
+	} : p;
+}
+var ha = "beszel.layout.v1", ga = "beszel.inbox.read.v1", _a = 840, va = /* @__PURE__ */ new Set([
+	"online",
+	"online_rate",
+	"cpu",
+	"rate_spark",
+	"cpu_spark"
+]), ya = /* @__PURE__ */ new Set([
+	"online",
+	"cpu",
+	"rate"
+]), ba = /* @__PURE__ */ new Set([
+	"overview",
+	"system",
+	"alerts"
+]);
+function xa(e, t, n) {
+	return typeof e == "string" && t.has(e) ? e : n;
+}
+function Sa(e, t) {
+	return e === t || JSON.stringify(e) === JSON.stringify(t);
+}
+function Ca(e) {
+	let t = /* @__PURE__ */ z({ inputs: {} }), n = /* @__PURE__ */ z({
+		email: "",
+		password: ""
+	}), r = /* @__PURE__ */ z(_r), i = /* @__PURE__ */ z({ ...vr }), a = /* @__PURE__ */ R(!1), o = /* @__PURE__ */ z([]), s = /* @__PURE__ */ z([]), c = /* @__PURE__ */ z([]), l = /* @__PURE__ */ R(0), u = /* @__PURE__ */ R(!1), d = /* @__PURE__ */ R(""), f = /* @__PURE__ */ R(""), p = /* @__PURE__ */ R("systems"), m = /* @__PURE__ */ R(null), h = /* @__PURE__ */ R("severity"), g = /* @__PURE__ */ R(!0), _ = /* @__PURE__ */ R(""), v = /* @__PURE__ */ R(null), y = /* @__PURE__ */ z(null), b = /* @__PURE__ */ R(!1), ee = /* @__PURE__ */ R("CPU"), x = /* @__PURE__ */ R("1h"), S = /* @__PURE__ */ R(""), C = /* @__PURE__ */ R(0), w = /* @__PURE__ */ z([]), T = /* @__PURE__ */ z(/* @__PURE__ */ new Set()), te = /* @__PURE__ */ R(null), ne = /* @__PURE__ */ z({}), re = /* @__PURE__ */ z(null), E = V(() => xr(t.value)), D = V(() => {
+		let e = t.value.inputs.server;
+		return typeof e == "string" && e.trim() ? Hr(e) : "";
+	}), ie = V(() => !!(D.value && n.value.email && n.value.password)), oe = V(() => `${D.value}|${n.value.email}|${n.value.password}`), O = V(() => {
+		let e = Number(t.value.inputs.refreshInterval ?? 30);
+		return (Number.isFinite(e) && e >= 15 && e <= 300 ? e : 30) * 1e3;
+	}), se = V(() => {
+		let e = Number(t.value.inputs.threshold ?? 90);
+		return Number.isFinite(e) && e > 0 ? Math.min(100, e) : 0;
+	}), ce = V(() => xa(t.value.inputs.trayFormat, va, "online")), le = V(() => xa(t.value.inputs.notchMetric, ya, "online")), ue = V(() => xa(t.value.inputs.widgetMode, ba, "overview")), de = V(() => typeof t.value.inputs.widgetSystem == "string" ? t.value.inputs.widgetSystem.trim() : ""), fe = V(() => t.value.inputs.notify === !0), pe = V(() => (t.value.viewport?.width ?? 0) >= _a), me = V(() => m.value ?? (pe.value ? "table" : "cards")), he = V(() => u.value && l.value === 0), ge = V(() => l.value > 0 && Date.now() - l.value > 12e4), _e = V(() => pa(d.value, f.value, E.value)), ve = V(() => Oi(o.value)), ye = V(() => {
+		let e = _.value.trim().toLowerCase();
+		return ki(e ? o.value.filter((t) => t.name.toLowerCase().includes(e) || t.host && t.host.toLowerCase().includes(e) || t.info?.h && t.info.h.toLowerCase().includes(e)) : o.value, h.value, g.value);
+	}), be = V(() => ji(o.value, s.value, se.value, E.value)), k = V(() => new Set(w.value.filter((e) => !T.value.has(e.key)).map((e) => e.key))), xe = V(() => {
+		let e = v.value;
+		if (e) {
+			let t = o.value.find((t) => t.id === e);
+			if (t) return t;
+		}
+		return pe.value ? ye.value[0] ?? null : null;
+	}), Se = V(() => ie.value ? d.value && o.value.length === 0 ? { kind: "error" } : !pe.value && v.value && xe.value ? {
+		kind: "detail",
+		system: xe.value
+	} : p.value === "alerts" ? { kind: "alerts" } : { kind: "fleet" } : { kind: "setup" }), Ce = V(() => ma({
+		systems: o.value,
+		summary: ve.value,
+		threshold: se.value,
+		errorKind: d.value,
+		errorMessage: _e.value,
+		isInitialLoading: he.value,
+		stale: ge.value,
+		updatedAt: l.value,
+		lang: E.value
+	})), we = V(() => ({
+		lang: E.value,
+		screen: Se.value,
+		viewportWidth: t.value.viewport?.width ?? 0,
+		viewportHeight: t.value.viewport?.height ?? 0,
+		isWide: pe.value,
+		currentLayout: me.value,
+		configured: ie.value,
+		serverUrl: D.value,
+		systems: o.value,
+		sortedSystems: ye.value,
+		fleetSummary: ve.value,
+		attentionItems: be.value,
+		fleetHistory: c.value,
+		updatedAt: l.value,
+		stale: ge.value,
+		isInitialLoading: he.value,
+		refreshing: u.value,
+		errorKind: d.value,
+		errorMessage: _e.value,
+		errorDetail: f.value,
+		sortKey: h.value,
+		sortDesc: g.value,
+		searchQuery: _.value,
+		selectedSystem: xe.value,
+		detail: y.value,
+		detailLoading: b.value,
+		historyMetric: ee.value,
+		historyPeriod: x.value,
+		copiedKey: S.value,
+		inboxBoundCount: C.value,
+		inboxAlerts: w.value,
+		inboxUnreadKeys: k.value,
+		expandedInboxKey: te.value,
+		inboxBusy: ne.value,
+		canInboxRemove: i.value.inboxRemove
+	})), Te = V(() => ({
+		lang: E.value,
+		configured: ie.value,
+		serverUrl: D.value,
+		systems: o.value,
+		fleetSummary: ve.value,
+		attentionItems: be.value,
+		fleetHistory: c.value,
+		inboxAlerts: w.value,
+		inboxUnreadKeys: k.value,
+		stale: ge.value,
+		errorKind: d.value,
+		errorMessage: _e.value,
+		verdictText: Ce.value.text,
+		verdictTone: Ce.value.tone ?? "muted",
+		trayFormat: ce.value,
+		notchMetric: le.value,
+		activeNotchActivity: re.value,
+		widgetMode: ue.value,
+		widgetSystem: de.value,
+		selectedSystemId: v.value,
+		detail: ue.value === "system" ? y.value : null,
+		caps: i.value
+	})), Ee = !1, De = "", Oe = ae(!0);
+	function ke() {
+		if (Ee) return;
+		Ee = !0;
+		let t = Fr(ha, null);
+		m.value = t === "cards" || t === "table" ? t : null;
+		let n = Fr(ga, []);
+		T.value = new Set(Array.isArray(n) ? n.map(String) : []), Oe.run(() => {
+			Jt(oe, (t) => {
+				De && De !== t && (o.value = [], s.value = [], c.value = [], l.value = 0, v.value = null, y.value = null, b.value = !1, p.value = "systems", _.value = "", re.value = null, d.value = "", f.value = "", e()), De = t;
+			}, {
+				flush: "sync",
+				immediate: !0
+			}), Jt(m, (e) => {
+				e && Ir(ha, e);
+			}, { flush: "sync" }), Jt(T, (e) => {
+				Ir(ga, [...e].slice(-200));
+			}, { flush: "sync" });
+		});
+	}
+	function Ae(e) {
+		Oe.run(() => {
+			Jt([
+				o,
+				s,
+				c,
+				l,
+				d,
+				f,
+				w,
+				T,
+				re,
+				i,
+				p,
+				m,
+				h,
+				g,
+				_,
+				v,
+				y,
+				b,
+				ee,
+				x,
+				S,
+				C,
+				te,
+				ne,
+				u
+			], () => e(), { flush: "sync" });
+		});
+	}
+	function je(e, t = "") {
+		d.value = e, f.value = t;
+	}
+	function Me(e, t) {
+		let n = ne.value;
+		if (t === null) {
+			if (!(e in n)) return;
+			let t = { ...n };
+			delete t[e], ne.value = t;
+		} else n[e] !== t && (ne.value = {
+			...n,
+			[e]: t
+		});
+	}
+	function A(e, t) {
+		if (T.value.has(e) === t) return;
+		let n = new Set(T.value);
+		t ? n.add(e) : n.delete(e), T.value = n;
+	}
+	function j() {
+		let e = wr();
+		return Sa(r.value, e) || (r.value = e), r.value;
+	}
+	function Ne() {
+		let e = Tr();
+		a.value !== e && (a.value = e);
+	}
+	async function Pe(e = "all") {
+		let t = await Lr(i.value, e);
+		return Sa(i.value, t) || (i.value = t), i.value;
+	}
+	function M(e) {
+		ke();
+		let r = t.value;
+		Sa(r.inputs, e.inputs) && r.viewport?.width === e.viewport?.width && r.viewport?.height === e.viewport?.height || (t.value = e);
+		let i = {
+			email: Cr("email"),
+			password: Cr("password")
+		};
+		Sa(n.value, i) || (n.value = i), Ne();
+	}
+	return {
+		scope: Oe,
+		credentialsRef: n,
+		demandRef: r,
+		capsRef: i,
+		systemsRef: o,
+		alertsRef: s,
+		fleetHistoryRef: c,
+		updatedAtRef: l,
+		refreshingRef: u,
+		activeViewRef: p,
+		layoutOverrideRef: m,
+		sortKeyRef: h,
+		sortDescRef: g,
+		searchQueryRef: _,
+		detailIdRef: v,
+		detailRef: y,
+		detailLoadingRef: b,
+		historyMetricRef: ee,
+		historyPeriodRef: x,
+		copiedKeyRef: S,
+		inboxBoundCountRef: C,
+		inboxAlertsRef: w,
+		inboxReadKeysRef: T,
+		expandedInboxKeyRef: te,
+		inboxBusyRef: ne,
+		activeNotchActivityRef: re,
+		lang: E,
+		serverUrl: D,
+		configured: ie,
+		connectionKey: oe,
+		refreshIntervalMs: O,
+		threshold: se,
+		widgetMode: ue,
+		notifyEnabled: fe,
+		currentLayout: me,
+		panelState: we,
+		surfaceData: Te,
+		setError: je,
+		setInboxItemBusy: Me,
+		markInboxRead: (e) => A(e, !0),
+		deleteInboxReadKey: (e) => A(e, !1),
+		syncEnv: M,
+		syncOutputs: j,
+		syncSubscription: Ne,
+		syncCapabilities: Pe,
+		watchInvalidation: Ae
+	};
+}
+// src/ui/theme.ts
+var q = {
+	blue: "#2662d9",
+	emerald: "#2eb88a",
+	orange: "#e88c30",
+	purple: "#af57db",
+	rose: "#e23670",
+	green: "#3db866",
+	yellow: "#eab308",
+	red: "#ef4444",
+	muted: "#71717a"
+};
+function J(e = "") {
+	return `rounded-xl bg-surface border border-border ${e}`.trim();
+}
+function wa(e, t = q.green) {
+	return e >= 90 ? q.red : e >= 65 ? q.yellow : t;
+}
+function Ta(e, t = !0) {
+	return t ? e >= 90 ? "text-[#ef4444]" : e >= 65 ? "text-[#eab308]" : "text-text" : "text-textMuted";
+}
+function Ea(e) {
+	return e === "danger" ? q.red : e === "warning" ? q.yellow : e === "success" ? q.green : e === "accent" ? q.blue : q.muted;
+}
+function Y(e, t = 7) {
+	return G("Box", {
+		width: t,
+		height: t,
+		radius: t / 2,
+		background: e,
+		tw: "shrink-0"
+	});
+}
+function Da() {
+	return G("Box", { tw: "w-full h-px bg-border shrink-0" });
+}
+function Oa(e, t, n = 4) {
+	let r = hi(Number.isFinite(e) ? e : 0, 0, 100);
+	return G("Box", {
+		height: n,
+		fillWidth: !0,
+		radius: n / 2,
+		background: "border"
+	}, r > 0 ? G("Box", {
+		absolute: !0,
+		top: 0,
+		left: 0,
+		height: n,
+		radius: n / 2,
+		widthPercent: Math.max(2, r),
+		background: t
+	}) : null);
+}
+function X(e, t, n) {
+	let r = n.size ?? 26, i = n.iconSize ?? 14;
+	return G("ButtonBase", {
+		...n.key ? { key: n.key } : {},
+		width: r,
+		height: r,
+		center: !0,
+		label: n.tooltip,
+		tooltip: n.tooltip,
+		disabled: n.disabled ?? !1,
+		tw: `rounded-lg shrink-0 ${n.active ? "bg-surfacePressed" : ""} ${n.disabled ? "opacity-35" : "cursor-pointer hover:bg-surfaceHover active:bg-surfacePressed"}`,
+		...n.disabled ? {} : { onClick: t }
+	}, G("Icon", {
+		svg: sa(e),
+		width: i,
+		height: i,
+		textColor: n.color ?? (n.active ? "text" : "textMuted"),
+		...n.spinning ? { keyframes: {
+			duration: 900,
+			repeat: -1,
+			ease: "linear",
+			frames: [{
+				at: 0,
+				rotate: 0
+			}, {
+				at: 1,
+				rotate: 360
+			}]
+		} } : {}
+	}));
+}
+function ka(e, t, n = "") {
+	return K(e, { tw: `text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0 text-[${t}] bg-[${t}1c] ${n}`.trim() });
+}
+function Aa(e) {
+	return G("Column", {
+		key: e.key,
+		tw: "grow basis-0 min-w-0 rounded-xl bg-surface border border-border px-2.5 py-2 gap-0.5",
+		...e.tooltip ? { tooltip: e.tooltip } : {}
+	}, K(e.label, { tw: "text-[10px] font-medium text-textMuted truncate" }), K(e.value, { tw: `text-[15px] font-bold tabular-nums leading-tight truncate ${e.valueHex ? `text-[${e.valueHex}]` : "text-text"}` }), e.sparkPoints && e.sparkPoints.length > 1 ? G("Chart", {
+		type: "area",
+		height: 16,
+		tw: "w-full h-[16px]",
+		curve: "monotone",
+		axes: !1,
+		grid: !1,
+		legend: !1,
+		hover: !1,
+		appear: !1,
+		strokeWidth: 1.5,
+		series: [{
+			name: e.key,
+			color: e.tintHex,
+			fill: .2,
+			points: e.sparkPoints
+		}]
+	}) : null);
+}
+function ja(e, t) {
+	return G("Row", { tw: "items-center gap-2 w-full px-0.5 pt-1" }, K(e, { tw: "text-[11px] font-semibold text-textMuted grow truncate" }), t ?? null);
+}
+// src/ui/panel/alerts.ts
+function Ma(e, t, n) {
+	return e.length ? [ja(H(n, `当前异常 · ${e.length}`, `Active · ${e.length}`)), G("Column", { tw: `${J("overflow-hidden")} w-full` }, ...e.flatMap((e, n) => {
+		let r = e.severity === "critical" ? q.red : q.yellow;
+		return [n > 0 ? Da() : null, G("ButtonBase", {
+			key: `attn-${e.id}`,
+			label: e.title,
+			onClick: () => {
+				t.onSetView("systems"), t.onOpenDetail(e.systemId);
+			},
+			tw: "flex-row items-center gap-2 px-3 py-2 w-full min-w-0 cursor-pointer hover:bg-surfaceHover"
+		}, Y(r, 6), K(e.title, { tw: "text-[12px] font-medium flex-1 min-w-0 truncate" }), K(e.detail, { tw: `text-[11px] font-medium tabular-nums shrink-0 text-[${r}]` }))];
+	}))] : [];
+}
+function Na(e, t, n) {
+	let { lang: r } = t, i = t.inboxUnreadKeys.has(e.key), a = t.expandedInboxKey === e.key, o = t.inboxBusy[e.key], s = e.severity === "critical" ? q.red : e.severity === "info" ? q.green : q.yellow, c = e.receivedAt ? ua(e.receivedAt * 1e3, r) : "";
+	return G("Column", {
+		key: `inbox-${e.key}`,
+		tw: "w-full"
+	}, G("Row", { tw: "items-center gap-1.5 px-3 py-2 w-full" }, G("ButtonBase", {
+		key: `inbox-open-${e.key}`,
+		label: e.title,
+		onClick: () => n.onToggleInboxExpand(e),
+		tw: "flex-row items-center gap-2 flex-1 min-w-0 cursor-pointer"
+	}, Y(i ? s : q.muted, 6), K(e.title, { tw: `text-[12px] flex-1 min-w-0 truncate ${i ? "font-semibold" : "font-normal text-textMuted"}` }), c ? K(c, { tw: "text-[10.5px] text-textMuted tabular-nums shrink-0" }) : null), t.canInboxRemove ? X("trash", () => n.onDeleteInbox(e), {
+		key: `inbox-del-${e.key}`,
+		tooltip: H(r, "删除", "Delete"),
+		disabled: o === "deleting",
+		size: 22,
+		iconSize: 12
+	}) : null), a ? G("Column", { tw: "px-3 pb-2.5 pl-6 w-full" }, o === "loading" ? K(H(r, "加载中…", "Loading…"), { tw: "text-[11px] text-textMuted" }) : K(e.body || e.title, {
+		selectable: !0,
+		tw: "text-[11px] text-textMuted leading-snug"
+	})) : null);
+}
+function Pa(e, t) {
+	let { lang: n, inboxAlerts: r, inboxBoundCount: i } = e;
+	return i === 0 && r.length === 0 ? [] : [ja(r.length ? H(n, `告警消息 · ${r.length}`, `Messages · ${r.length}`) : H(n, "告警消息", "Messages")), r.length ? G("Column", { tw: `${J("overflow-hidden")} w-full` }, ...r.slice(0, 20).flatMap((n, r) => [r > 0 ? Da() : null, Na(n, e, t)])) : G("Row", { tw: `${J("px-3 py-2.5")} items-center w-full` }, K(H(n, "暂无告警消息", "No messages"), { tw: "text-[11.5px] text-textMuted" }))];
+}
+function Fa(e, t) {
+	let { lang: n, attentionItems: r, inboxAlerts: i, inboxBoundCount: a } = e, o = r.length === 0 && i.length === 0 && a === 0;
+	return [G("Row", { tw: "items-center gap-2 w-full px-3.5 pt-3 pb-2 shrink-0" }, X("back", () => t.onSetView("systems"), {
+		key: "alerts-back",
+		tooltip: H(n, "返回", "Back")
+	}), K(H(n, "告警", "Alerts"), { tw: "text-[14px] font-semibold truncate flex-1 min-w-0" }), X("refresh", () => {
+		t.onRefresh(), t.onRefreshInbox();
+	}, {
+		key: "alerts-refresh",
+		tooltip: H(n, "刷新", "Refresh"),
+		disabled: e.refreshing,
+		spinning: e.refreshing
+	}), e.serverUrl ? X("external", () => t.onOpenBeszel(), {
+		key: "alerts-open",
+		tooltip: H(n, "打开 Beszel", "Open Beszel")
+	}) : null), G("Scroll", { tw: "flex-1 min-h-0" }, G("Column", { tw: "px-3.5 pb-3.5 gap-2.5" }, o ? G("Row", { tw: `${J("px-3 py-2.5")} items-center gap-2 w-full` }, Y(q.green, 7), K(H(n, "所有主机运行平稳", "All servers healthy"), { tw: "text-[11.5px] text-textMuted" })) : [...Ma(r, t, n), ...Pa(e, t)]))];
+}
+// src/ui/panel/chart.ts
+function Ia(e, t, n) {
+	return da(e.map((e) => ({
+		x: Li(e.created),
+		y: t(e.stats)
+	})).filter((e) => Number.isFinite(e.x))).map((e) => e.map((e) => ({
+		...e,
+		valueLabel: n(e.y)
+	})));
+}
+function La(e, t, n) {
+	let r = 0;
+	for (let n of e) {
+		let [e, i] = t(n.stats);
+		e !== null && (r = Math.max(r, e)), i !== null && (r = Math.max(r, i));
+	}
+	let { unit: i, divisor: a } = Ui(r), o = (e) => e === null ? null : Number((e / a).toFixed(2)), s = (e) => `${e.toFixed(2)} ${i}`;
+	return {
+		unitBadge: i,
+		legend: n.map((e) => ({
+			name: e.legend,
+			color: e.color
+		})),
+		lines: n.map((n, r) => ({
+			name: n.series(i),
+			color: n.color,
+			runs: Ia(e, (e) => o(t(e)[r]), s)
+		}))
+	};
+}
+function Ra(e, t, n) {
+	if (t === "CPU" || t === "MEM") {
+		let r = t === "CPU";
+		return {
+			unitBadge: "",
+			legend: [],
+			lines: [{
+				name: r ? "CPU %" : H(n, "内存 %", "Memory %"),
+				color: r ? q.blue : q.emerald,
+				runs: Ia(e, (e) => {
+					let t = r ? e.cpu : e.mp;
+					return typeof t == "number" && Number.isFinite(t) ? t : null;
+				}, (e) => `${e.toFixed(1)}%`)
+			}]
+		};
+	}
+	return t === "NET" ? La(e, (e) => {
+		let t = xi(e);
+		return [t.recv, t.sent];
+	}, [{
+		legend: H(n, "下行", "In"),
+		series: (e) => H(n, `下行 (${e})`, `In (${e})`),
+		color: q.emerald
+	}, {
+		legend: H(n, "上行", "Out"),
+		series: (e) => H(n, `上行 (${e})`, `Out (${e})`),
+		color: q.rose
+	}]) : La(e, (e) => {
+		let t = Si(e);
+		return [t.read, t.write];
+	}, [{
+		legend: H(n, "读", "Read"),
+		series: (e) => H(n, `读取 (${e})`, `Read (${e})`),
+		color: q.blue
+	}, {
+		legend: H(n, "写", "Write"),
+		series: (e) => H(n, `写入 (${e})`, `Write (${e})`),
+		color: q.orange
+	}]);
+}
+function za(e, t, n) {
+	let { lang: r, historyMetric: i, historyPeriod: a } = t, o = e?.points ?? [], s = Gr[a], c = Date.now(), l = o.some((e) => {
+		let t = Si(e.stats);
+		return t.read !== null || t.write !== null;
+	}), u = [
+		{
+			label: "CPU",
+			value: "CPU"
+		},
+		{
+			label: H(r, "内存", "MEM"),
+			value: "MEM"
+		},
+		{
+			label: H(r, "网络", "NET"),
+			value: "NET"
+		},
+		...l || i === "DISK" ? [{
+			label: H(r, "磁盘", "DISK"),
+			value: "DISK"
+		}] : []
+	], { unitBadge: d, legend: f, lines: p } = Ra(o, i, r), m = p.flatMap((e) => e.runs), h = m.some((e) => e.length > 0), g = i === "CPU" || i === "MEM";
+	return G("Column", { tw: `${J("p-3 gap-2")} w-full` }, G("Row", { tw: "items-center gap-2 w-full" }, K(H(r, "历史趋势", "History"), { tw: "text-[12px] font-semibold shrink-0" }), d ? ka(d, q.muted) : null, G("Spacer"), G("Segmented", {
+		key: "period-picker",
+		value: a,
+		items: [
+			"1h",
+			"12h",
+			"24h",
+			"7d"
+		].map((e) => ({
+			label: e,
+			value: e
+		})),
+		onChange: (e) => n.onSetPeriod(e)
+	})), G("Row", { tw: "items-center gap-2 w-full" }, G("Segmented", {
+		key: "metric-picker",
+		value: i,
+		items: u,
+		onChange: (e) => n.onSetMetric(e)
+	}), G("Spacer"), ...f.map((e) => G("Row", { tw: "items-center gap-1 shrink-0" }, Y(e.color, 6), K(e.name, { tw: "text-[10.5px] text-textMuted" })))), h ? G("Chart", {
+		type: g ? "area" : "line",
+		xKind: "time",
+		height: 98,
+		curve: "monotone",
+		strokeWidth: 1.75,
+		grid: !0,
+		gridStyle: "dashed",
+		legend: !1,
+		hover: !0,
+		appear: !1,
+		dots: m.some((e) => e.length === 1),
+		xDomain: [c - s.ms, c],
+		...g ? { yDomain: [0, 100] } : {},
+		yTicks: 3,
+		xTicks: 4,
+		series: p.flatMap((e) => e.runs.map((t) => ({
+			name: e.name,
+			color: e.color,
+			...g ? { fill: .2 } : {},
+			points: t
+		}))),
+		tw: "w-full"
+	}) : G("Column", { tw: "h-[98px] items-center justify-center" }, K(e?.error || (t.detailLoading ? H(r, "加载中…", "Loading…") : H(r, "暂无数据", "No data")), { tw: `text-[11px] ${e?.error ? "text-[#ef4444]" : "text-textMuted"}` })));
+}
+// src/ui/panel/detail.ts
+function Ba(e, t, n) {
+	let r = e.info, i = t?.details, a = t?.points.at(-1)?.stats, o = e.status === "up" && !!r, s = vi(r), c = yi(r), l = a?.mu !== void 0 && a?.m !== void 0 ? `${Gi(a.mu)} / ${Gi(a.m)}` : i?.memory ? Gi(i.memory / 1024 ** 3) : "", u = a?.du !== void 0 && a?.d !== void 0 ? `${Gi(a.du)} / ${Gi(a.d)}` : "", d = i?.cores ? i.threads && i.threads !== i.cores ? `${i.cores}C / ${i.threads}T` : `${i.cores}` : r?.c ? String(r.c) : "", f = [];
+	r?.u && r.u > 0 && f.push([H(n, "运行", "Uptime"), Vi(r.u, n)]), s && f.push([H(n, "负载", "Load"), s.map((e) => e.toFixed(2)).join(" / ")]), d && f.push([H(n, "核心", "Cores"), d]), c !== null && f.push([H(n, "网络", "Network"), W(c)]), (i?.kernel || r?.k) && f.push([H(n, "内核", "Kernel"), i?.kernel || r?.k || ""]), i?.os_name && f.push([H(n, "系统", "OS"), i.os_name]), (i?.cpu || r?.m) && f.push([H(n, "处理器", "CPU"), i?.cpu || r?.m || ""]), r?.dt !== void 0 && Number.isFinite(r.dt) && f.push([
+		H(n, "温度", "Temp"),
+		`${Math.round(r.dt)}°C`,
+		r.dt >= 85
+	]), r?.g !== void 0 && Number.isFinite(r.g) && f.push([
+		"GPU",
+		`${Math.round(r.g)}%`,
+		r.g >= 90
+	]), r?.sv && f.push([
+		H(n, "服务", "Services"),
+		H(n, `${r.sv[0]} 个，失败 ${r.sv[1]}`, `${r.sv[0]} total, ${r.sv[1]} failed`),
+		r.sv[1] > 0
+	]);
+	let p = (e, t, n) => G("Column", { tw: "flex-1 min-w-0 gap-1" }, K(o && t !== void 0 ? `${Math.round(t)}%` : "—", { tw: `text-[20px] font-bold tabular-nums leading-none ${o && t !== void 0 ? Ta(t) : "text-textMuted"}` }), K(e, { tw: "text-[10.5px] font-medium text-textMuted" }), o && t !== void 0 ? Oa(t, wa(t, q.green), 3.5) : null, n ? K(n, { tw: "text-[10px] text-textMuted tabular-nums truncate" }) : null);
+	return G("Column", { tw: `${J("p-3 gap-2.5")} w-full` }, G("Row", { tw: "gap-3 w-full" }, p("CPU", r?.cpu, ""), p(H(n, "内存", "Memory"), r?.mp, l), p(H(n, "磁盘", "Disk"), r?.dp, u)), f.length ? Da() : null, f.length ? G("Grid", {
+		columns: 3,
+		gap: 6,
+		tw: "w-full"
+	}, ...f.map(([e, t, n]) => G("Column", { tw: "min-w-0 gap-0.5" }, K(e, { tw: "text-[9.5px] text-textMuted" }), K(t, { tw: `text-[11px] font-medium tabular-nums truncate ${n ? "text-[#ef4444]" : "text-text"}` })))) : null);
+}
+function Va(e, t) {
+	if (!e.length) return null;
+	let n = wi(e, t);
+	return G("Column", { tw: "gap-1.5 w-full" }, ja(H(t, `容器 · ${n.length}`, `Containers · ${n.length}`)), G("Column", { tw: `${J("overflow-hidden")} w-full` }, ...n.flatMap((e, n) => {
+		let r = Ci(e, t);
+		return [n > 0 ? Da() : null, G("Row", {
+			key: `container-${e.id}`,
+			tw: "px-3 py-1.5 items-center gap-2 w-full"
+		}, Y(Ea(r.tone), 6), G("Column", { tw: "flex-1 min-w-0" }, K(e.name, { tw: "text-[11.5px] font-medium truncate" }), K(e.status || r.label, { tw: `text-[10px] truncate ${r.bad ? `text-[${Ea(r.tone)}]` : "text-textMuted"}` })), e.memory === void 0 ? null : K(Wi(e.memory), { tw: "text-[10.5px] text-textMuted tabular-nums shrink-0" }), K(`${Math.round(e.cpu ?? 0)}%`, { tw: `w-[34px] text-right text-[11px] font-medium tabular-nums shrink-0 ${Ta(e.cpu ?? 0)}` }))];
+	})));
+}
+function Ha(e, t) {
+	if (!e.length) return null;
+	let n = e.filter(Ti), r = n.length ? [...n, ...e.filter((e) => !Ti(e)).slice(0, 6)] : e.slice(0, 8);
+	return G("Column", { tw: "gap-1.5 w-full" }, ja(n.length ? H(t, `Systemd 服务 · ${n.length} 失败`, `Systemd · ${n.length} failed`) : H(t, `Systemd 服务 · ${e.length}`, `Systemd · ${e.length}`)), G("Column", { tw: `${J("overflow-hidden")} w-full` }, ...r.flatMap((e, t) => {
+		let n = Ti(e);
+		return [t > 0 ? Da() : null, G("Row", {
+			key: `svc-${e.id || e.name}`,
+			tw: "px-3 py-1.5 items-center gap-2 w-full"
+		}, Y(n ? q.red : q.green, 6), K(e.name, { tw: "text-[11.5px] font-medium flex-1 min-w-0 truncate" }), K(String(e.sub ?? e.state ?? "—"), { tw: `text-[10.5px] shrink-0 ${n ? "text-[#ef4444] font-semibold" : "text-textMuted"}` }))];
+	})));
+}
+function Ua(e, t) {
+	return e.length ? G("Column", { tw: "gap-1.5 w-full" }, ja(H(t, `S.M.A.R.T. 硬盘 · ${e.length}`, `S.M.A.R.T. · ${e.length}`)), G("Column", { tw: `${J("overflow-hidden")} w-full` }, ...e.flatMap((e, t) => {
+		let n = Ei(e), r = (e.state || "").toUpperCase() === "PASSED";
+		return [t > 0 ? Da() : null, G("Row", {
+			key: `smart-${e.id || e.name}`,
+			tw: "px-3 py-1.5 items-center gap-2 w-full"
+		}, Y(n ? q.red : r ? q.green : q.muted, 6), G("Column", { tw: "flex-1 min-w-0" }, K(e.model || e.name, { tw: "text-[11.5px] font-medium truncate" }), e.model ? K(e.name, { tw: "text-[10px] text-textMuted truncate" }) : null), e.temp !== void 0 && Number.isFinite(e.temp) ? K(`${Math.round(e.temp)}°C`, { tw: `text-[10.5px] tabular-nums shrink-0 ${e.temp >= 55 ? "text-[#eab308]" : "text-textMuted"}` }) : null, ka(e.state || "UNKNOWN", n ? q.red : r ? q.green : q.muted))];
+	}))) : null;
+}
+function Wa(e, t, n, r) {
+	let { lang: i } = t, a = t.detail?.id === e.id ? t.detail : null, o = Ri(e.status), s = t.copiedKey === `sys:${e.id}`;
+	return [G("Row", { tw: "items-center gap-2 w-full px-3.5 pt-3 pb-2 shrink-0" }, r ? X("back", n.onCloseDetail, {
+		key: "detail-back",
+		tooltip: H(i, "返回", "Back")
+	}) : null, Y(Ea(o), 8), G("Column", { tw: "flex-1 min-w-0 gap-0.5" }, K(e.name, { tw: "text-[13.5px] font-semibold truncate" }), K([e.host || a?.details?.hostname || e.info?.h, zi(e.status, i)].filter(Boolean).join(" · "), { tw: `text-[11px] truncate ${e.status === "up" ? "text-textMuted" : `text-[${Ea(o)}]`}` })), X(s ? "check" : "clipboard", () => n.onCopySummary(e), {
+		key: "detail-copy",
+		tooltip: s ? H(i, "已复制", "Copied") : H(i, "复制摘要", "Copy summary"),
+		color: s ? "text" : "textMuted"
+	}), t.serverUrl ? X("external", () => n.onOpenBeszel(e.id), {
+		key: "detail-open",
+		tooltip: H(i, "打开 Beszel", "Open in Beszel")
+	}) : null), G("Scroll", { tw: "flex-1 min-h-0" }, G("Column", { tw: "px-3.5 pb-3.5 gap-2.5" }, Ba(e, a, i), za(a, t, n), Va(a?.containers ?? [], i), Ha(a?.services ?? [], i), Ua(a?.smartDevices ?? [], i)))];
+}
+// src/ui/panel/fleet.ts
+function Ga(e) {
+	let { lang: t, fleetSummary: n } = e, r = e.fleetHistory.map((e) => ({
+		x: e.ts,
+		y: e.avgCpu
+	})), i = e.fleetHistory.map((e) => ({
+		x: e.ts,
+		y: e.bandwidthBytes
+	})), a = n.down > 0 ? q.red : n.pending > 0 ? q.yellow : q.green;
+	return G("Row", { tw: "w-full gap-2 px-3.5 pb-2 shrink-0 items-stretch" }, Aa({
+		key: "kpi-online",
+		label: H(t, "在线", "Online"),
+		value: `${n.up}/${n.total}`,
+		valueHex: n.down > 0 ? q.red : n.total > 0 && n.up === n.total ? q.green : void 0,
+		tintHex: a
+	}), Aa({
+		key: "kpi-bw",
+		label: H(t, "实时带宽", "Bandwidth"),
+		value: W(n.totalBandwidthBytes, !0),
+		tintHex: q.emerald,
+		sparkPoints: i
+	}), Aa({
+		key: "kpi-cpu",
+		label: H(t, "平均 CPU", "Avg CPU"),
+		value: n.up > 0 ? `${Math.round(n.avgCpu)}%` : "—",
+		valueHex: n.avgCpu >= 65 ? wa(n.avgCpu) : void 0,
+		tintHex: wa(n.avgCpu, q.blue),
+		sparkPoints: r
+	}));
+}
+function Ka(e, t) {
+	return e.systems.length <= 6 && !e.searchQuery ? null : G("Row", { tw: "w-full px-3.5 pb-2 shrink-0" }, G("SearchField", {
+		key: "system-search",
+		value: e.searchQuery,
+		placeholder: H(e.lang, "搜索主机…", "Search servers…"),
+		onChange: (e) => t.onSetSearch(e)
+	}));
+}
+function qa(e, t) {
+	return G("Column", { tw: "flex-1 min-w-0 gap-1" }, G("Row", { tw: "items-center gap-1" }, K(e, { tw: "text-[9.5px] font-medium text-textMuted shrink-0" }), G("Spacer"), K(`${Math.round(t)}%`, { tw: `text-[11px] font-semibold tabular-nums ${Ta(t)}` })), Oa(t, wa(t, q.green), 3.5));
+}
+function Ja(e, t, n, r) {
+	let i = e.info, a = e.status === "up" && !!i, o = Ri(e.status), s = a ? yi(i) : null, c = a ? vi(i) : null, l = a && !!(i?.sv && i.sv[1] > 0);
+	return G("ButtonBase", {
+		key: `system-${e.id}`,
+		label: e.name,
+		tooltip: H(t, "查看详情", "View details"),
+		onClick: () => n.onOpenDetail(e.id),
+		tw: `${J("p-2.5 gap-2 min-w-0 flex-col items-start cursor-pointer hover:bg-surfaceHover")} ${r ? "border-[#2662d9] bg-surfaceHover" : ""}`
+	}, G("Row", { tw: "items-center gap-1.5 w-full min-w-0" }, Y(Ea(o), 7), K(e.name, { tw: "text-[12.5px] font-semibold truncate flex-1 min-w-0" }), l ? ka(`${i.sv[1]}!`, q.red) : null), ...a && i ? [G("Row", { tw: "gap-2 w-full" }, qa("CPU", i.cpu), qa(H(t, "内存", "MEM"), i.mp), qa(H(t, "磁盘", "DSK"), i.dp)), G("Row", { tw: "items-center gap-1.5 w-full" }, K(s === null ? Vi(i.u, t) : W(s, !0), { tw: "text-[10px] text-textMuted tabular-nums truncate" }), i.dt !== void 0 && Number.isFinite(i.dt) ? K(`${Math.round(i.dt)}°C`, { tw: `text-[10px] tabular-nums shrink-0 ${i.dt >= 85 ? "text-[#ef4444]" : "text-textMuted"}` }) : null, G("Spacer"), K(c ? `L ${c[0].toFixed(2)}` : Vi(i.u, t), { tw: "text-[10px] text-textMuted tabular-nums shrink-0" }))] : [G("Column", { tw: "items-start gap-1 py-1.5 w-full min-w-0" }, K(zi(e.status, t), { tw: `text-[11.5px] font-medium text-[${Ea(o)}]` }), K(e.host || i?.h || "—", { tw: "text-[10px] text-textMuted truncate" }))]);
+}
+function Ya(e, t, n, r, i, a = !0) {
+	let o = n.sortKey === t, s = o ? n.sortDesc ? " ↓" : " ↑" : "";
+	return G("ButtonBase", {
+		label: e,
+		onClick: () => r.onSetSort(t),
+		tw: `${i} cursor-pointer rounded px-1 py-0.5 hover:bg-surfaceHover ${a ? "justify-end" : "justify-start"}`
+	}, K(`${e}${s}`, { tw: `text-[10.5px] tabular-nums ${o ? "font-semibold text-text" : "font-medium text-textMuted"}` }));
+}
+function Xa(e, t, n, r) {
+	let { lang: i } = t;
+	return G("Column", { tw: `${J("overflow-hidden")} w-full` }, G("Row", { tw: "items-center gap-1.5 px-2.5 py-1.5 w-full" }, Ya(H(i, "主机", "Server"), "name", t, n, "flex-1 min-w-0", !1), Ya("CPU", "cpu", t, n, "w-[44px] shrink-0"), Ya(H(i, "内存", "MEM"), "mem", t, n, "w-[44px] shrink-0"), Ya(H(i, "磁盘", "DSK"), "disk", t, n, "w-[44px] shrink-0"), Ya(H(i, "网速", "Net"), "net", t, n, "w-[62px] shrink-0")), Da(), ...e.flatMap((e, t) => {
+		let a = e.info, o = e.status === "up" && !!a, s = Ri(e.status), c = o ? yi(a) : null;
+		return [t > 0 ? Da() : null, G("ButtonBase", {
+			key: `system-${e.id}`,
+			label: e.name,
+			tooltip: H(i, "查看详情", "View details"),
+			onClick: () => n.onOpenDetail(e.id),
+			tw: `flex-row items-center gap-1.5 px-2.5 py-2 w-full min-w-0 cursor-pointer hover:bg-surfaceHover ${r === e.id ? "bg-surfaceHover" : ""}`
+		}, Y(Ea(s), 6), K(e.name, { tw: "flex-1 min-w-0 text-[12px] font-medium truncate" }), o && a ? [
+			K(`${Math.round(a.cpu)}%`, { tw: `w-[44px] text-right text-[11.5px] font-medium tabular-nums shrink-0 ${Ta(a.cpu)}` }),
+			K(`${Math.round(a.mp)}%`, { tw: `w-[44px] text-right text-[11.5px] font-medium tabular-nums shrink-0 ${Ta(a.mp)}` }),
+			K(`${Math.round(a.dp)}%`, { tw: `w-[44px] text-right text-[11.5px] font-medium tabular-nums shrink-0 ${Ta(a.dp)}` }),
+			K(W(c, !0), { tw: "w-[62px] text-right text-[11px] text-textMuted tabular-nums shrink-0" })
+		] : K(zi(e.status, i), { tw: `text-[11px] font-medium text-right shrink-0 text-[${Ea(s)}]` }))];
+	}));
+}
+function Za(e, t) {
+	let { lang: n, isWide: r, currentLayout: i, sortedSystems: a, selectedSystem: o } = e, s = a.length ? i === "cards" ? G("Grid", {
+		columns: 2,
+		gap: 8,
+		tw: "w-full"
+	}, ...a.map((e) => Ja(e, n, t, o?.id === e.id))) : Xa(a, e, t, o?.id ?? null) : G("Column", { tw: `${J("p-4 items-center")} w-full` }, K(e.systems.length ? H(n, "无匹配主机", "No matching servers") : e.isInitialLoading ? H(n, "加载中…", "Loading…") : H(n, "暂无主机", "No servers yet"), { tw: "text-[11.5px] text-textMuted" }));
+	return G("Column", {
+		...r ? { fillHeight: !0 } : {},
+		tw: r ? "w-[440px] shrink-0 min-h-0" : "flex-1 min-w-0 min-h-0"
+	}, Ga(e), Ka(e, t), G("Scroll", { tw: "flex-1 min-h-0" }, G("Column", { tw: "px-3.5 pb-3.5 gap-2" }, s)));
+}
+// src/ui/panel/header.ts
+function Qa(e, t) {
+	let { lang: n, sortKey: r, sortDesc: i } = e, a = i ? " ↓" : " ↑", o = [
+		{
+			value: "severity",
+			label: H(n, "状态优先", "State")
+		},
+		{
+			value: "cpu",
+			label: "CPU"
+		},
+		{
+			value: "mem",
+			label: H(n, "内存", "Memory")
+		},
+		{
+			value: "disk",
+			label: H(n, "磁盘", "Disk")
+		},
+		{
+			value: "net",
+			label: H(n, "网速", "Network")
+		},
+		{
+			value: "name",
+			label: H(n, "名称", "Name")
+		}
+	];
+	return G("MenuButton", {
+		key: "sort-menu",
+		label: {
+			severity: H(n, "状态", "State"),
+			cpu: `CPU${a}`,
+			mem: `${H(n, "内存", "MEM")}${a}`,
+			disk: `${H(n, "磁盘", "DSK")}${a}`,
+			net: `${H(n, "网速", "Net")}${a}`,
+			name: `${H(n, "名称", "Name")}${a}`
+		}[r],
+		tooltip: H(n, "排序方式", "Sort servers"),
+		fontSize: 11,
+		height: 24,
+		paddingX: 6,
+		paddingY: 0,
+		background: "#00000000",
+		border: [0, "border"],
+		menu: o.map((e) => ({
+			label: e.value === r && e.value !== "severity" ? `${e.label}${a}` : e.label,
+			radio: !0,
+			checked: r === e.value,
+			onClick: () => t.onSetSort(e.value)
+		}))
+	});
+}
+function $a(e, t, n) {
+	let { lang: r, currentLayout: i } = e, a = i === "cards" && e.systems.length > 1, o = !!(e.errorKind && e.systems.length > 0), s = o ? H(r, "更新失败", "Sync error") : e.stale ? H(r, `过期 · ${la(e.updatedAt)}`, `Stale · ${la(e.updatedAt)}`) : e.isInitialLoading ? H(r, "连接中", "Syncing") : "";
+	return G("Row", { tw: "items-center gap-2 w-full shrink-0 px-3.5 pt-3 pb-2" }, ca("server", 16, "text"), K("Beszel", { tw: "text-[14px] font-semibold shrink-0" }), s ? G("Row", { tw: `items-center gap-1 px-2 py-0.5 rounded-full shrink-0 ${o ? "bg-[#ef44441f]" : e.stale ? "bg-[#eab3081f]" : "bg-surfaceHover"}` }, Y(o ? q.red : e.stale ? q.yellow : q.muted, 5), K(s, { tw: `text-[10px] font-medium tabular-nums ${o ? "text-[#ef4444]" : e.stale ? "text-[#eab308]" : "text-textMuted"}` })) : null, G("Spacer"), a ? Qa(e, t) : null, n?.show ? X("bell", () => t.onSetView("alerts"), {
+		key: "header-alerts",
+		tooltip: n.count > 0 ? H(r, `告警 (${n.count})`, `Alerts (${n.count})`) : H(r, "告警", "Alerts"),
+		color: n.count > 0 ? "text" : "textMuted"
+	}) : null, e.systems.length > 0 ? X(i === "cards" ? "list" : "grid", t.onToggleLayout, {
+		key: "toggle-layout",
+		tooltip: i === "cards" ? H(r, "表格视图", "Table view") : H(r, "卡片视图", "Card view")
+	}) : null, e.configured ? X("refresh", t.onRefresh, {
+		key: "header-refresh",
+		tooltip: e.updatedAt ? H(r, `刷新 · ${la(e.updatedAt)}`, `Refresh · ${la(e.updatedAt)}`) : H(r, "刷新", "Refresh"),
+		disabled: e.refreshing,
+		spinning: e.refreshing
+	}) : null, e.configured && e.serverUrl ? X("external", () => t.onOpenBeszel(), {
+		key: "header-open",
+		tooltip: H(r, "打开 Beszel", "Open Beszel")
+	}) : null);
+}
+// src/ui/panel/index.ts
+function eo(e, t, n, ...r) {
+	let i = n && e.isWide;
+	return G("Column", {
+		preferredWidth: i ? Math.min(1080, e.viewportWidth) : 460,
+		preferredHeight: i ? Math.max(560, e.viewportHeight || 620) : 540,
+		safeArea: !0,
+		tw: "size-full min-w-0 min-h-0 text-text bg-background",
+		shortcuts: t
+	}, ...r);
+}
+function to(e, t, n) {
+	let { lang: r } = e;
+	return G("Column", { tw: "flex-1 min-h-0 items-center justify-center px-6 pb-6" }, G("Column", { tw: `${J("p-5 gap-2.5 items-center w-full")} ${n ? "border-[#ef444444]" : ""}` }, G("Box", {
+		width: 36,
+		height: 36,
+		radius: 10,
+		background: "surfaceHover",
+		center: !0
+	}, ca(n ? "alert" : "server", 18, "text")), K(n ? H(r, "连接失败", "Couldn't connect") : H(r, "连接 Beszel", "Connect Beszel"), { tw: "text-[14px] font-semibold text-center" }), K(n ? `${e.errorMessage}${e.errorDetail && e.errorKind !== "http" ? `\n${e.errorDetail}` : ""}` : H(r, "在设置中填写 Beszel 地址与账号即可开始。", "Enter your Beszel URL and account in settings."), { tw: "text-[11.5px] text-textMuted text-center leading-snug" }), n ? G("Button", {
+		text: H(r, "重试", "Retry"),
+		onClick: t.onRefresh,
+		tw: "mt-1"
+	}) : null));
+}
+function no(e, t) {
+	let { screen: n, lang: r, isWide: i, selectedSystem: a } = e, o = {
+		"CmdOrCtrl+R": t.onRefresh,
+		Escape: () => {
+			n.kind === "detail" ? t.onCloseDetail() : n.kind === "alerts" ? t.onSetView("systems") : e.searchQuery && t.onSetSearch("");
+		}
+	};
+	switch (n.kind) {
+		case "setup":
+		case "error": return eo(e, { "CmdOrCtrl+R": t.onRefresh }, !1, $a(e, t), to(e, t, n.kind === "error"));
+		case "detail": return eo(e, o, !1, ...Wa(n.system, e, t, !0));
+		case "alerts": return eo(e, o, !0, ...Fa(e, t));
+		case "fleet": {
+			let n = e.attentionItems.length + e.inboxUnreadKeys.size, s = n > 0 || e.inboxAlerts.length > 0 || e.inboxBoundCount > 0, c = Za(e, t);
+			return eo(e, o, !0, $a(e, t, {
+				show: s,
+				count: n
+			}), i ? G("Row", { tw: "flex-1 min-h-0 w-full" }, c, G("Box", {
+				width: 1,
+				fillHeight: !0,
+				tw: "bg-border shrink-0"
+			}), a ? G("Column", { tw: "flex-1 min-w-0 min-h-0 size-full" }, ...Wa(a, e, t, !1)) : G("Column", { tw: "flex-1 items-center justify-center p-6" }, K(H(r, "选择主机查看详情", "Select a server to view details"), { tw: "text-[12px] text-textMuted" }))) : c);
+		}
+	}
+}
+// src/ui/surfaces/types.ts
+var ro = sa("server");
+// src/ui/surfaces/notch.ts
+function io(e, t, n, r, i, a = "#ffffff") {
+	return G("Column", {
+		key: e,
+		tw: "grow basis-0 min-w-0 rounded-[10px] bg-[#ffffff0b] border border-[#ffffff18] px-2.5 py-2 gap-0.5"
+	}, K(t, { tw: "text-[10px] font-medium text-[#ffffff80] truncate" }), K(n, { tw: `text-[13.5px] font-bold tabular-nums leading-tight truncate text-[${a}]` }), i.length > 1 ? G("Chart", {
+		type: "area",
+		height: 16,
+		tw: "w-full h-[16px]",
+		curve: "monotone",
+		axes: !1,
+		grid: !1,
+		legend: !1,
+		hover: !1,
+		appear: !1,
+		strokeWidth: 1.5,
+		series: [{
+			name: e,
+			color: r,
+			fill: .2,
+			points: i
+		}]
+	}) : null);
+}
+function ao(e, t) {
+	if (!t && !e.caps.notch) return;
+	let { lang: n, systems: r, fleetSummary: i, attentionItems: a, inboxUnreadKeys: o } = e, s = a.length + o.size, c = G("Icon", {
+		svg: ro,
+		width: 14,
+		height: 14,
+		fontSize: 14,
+		textColor: "#ffffff"
+	}), l = "—";
+	r.length > 0 && (l = i.down > 0 ? `${i.down}↓` : e.notchMetric === "cpu" ? `${Math.round(i.avgCpu)}%` : e.notchMetric === "rate" ? Hi(i.totalBandwidthBytes) : `${i.up}/${i.total}`);
+	let u = {
+		compact: {
+			leading: c,
+			trailing: K(l, {
+				fontSize: 11.5,
+				fontWeight: 600,
+				fontFeatures: "tnum",
+				textColor: i.down > 0 ? q.red : "#ffffff"
+			})
+		},
+		minimal: G("Icon", {
+			svg: ro,
+			width: 13,
+			height: 13,
+			fontSize: 13,
+			textColor: "#ffffff"
+		})
+	};
+	if (e.caps.notchActivity && e.activeNotchActivity && e.activeNotchActivity.expiresAt > Date.now() && (u.activity = {
+		id: e.activeNotchActivity.id,
+		expiresAt: e.activeNotchActivity.expiresAt
+	}), t !== "expanded" && t !== void 0) return u;
+	let d = e.fleetHistory.map((e) => ({
+		x: e.ts,
+		y: e.avgCpu
+	})), f = e.fleetHistory.map((e) => ({
+		x: e.ts,
+		y: e.bandwidthBytes
+	})), p = ui(r.filter((e) => e.status === "up" && e.info), [(e) => Math.max(e.info.cpu, e.info.mp, e.info.dp)], ["desc"]).slice(0, 3), m = () => G("Box", { tw: "w-full h-px bg-[#ffffff14] shrink-0" }), h = a.length ? a.slice(0, 3).flatMap((t, n) => [n > 0 ? m() : null, G("ButtonBase", {
+		key: `na-${t.id}`,
+		label: t.title,
+		onClick: () => e.onOpenSystem(t.systemId),
+		tw: "flex-row items-center gap-2 px-2.5 py-2 cursor-pointer hover:bg-[#ffffff14] w-full"
+	}, Y(t.severity === "critical" ? q.red : q.yellow, 6), K(t.title, { tw: "text-[11.5px] font-semibold text-[#ffffff] truncate flex-1 min-w-0" }), K(t.detail, { tw: "text-[10px] text-[#ffffff80] truncate shrink-0" }))]) : p.length ? p.flatMap((t, n) => {
+		let r = t.info;
+		return [n > 0 ? m() : null, G("ButtonBase", {
+			key: `nh-${t.id}`,
+			label: t.name,
+			onClick: () => e.onOpenSystem(t.id),
+			tw: "flex-row items-center gap-2 px-2.5 py-1.5 cursor-pointer hover:bg-[#ffffff14] w-full"
+		}, Y(q.green, 6), K(t.name, { tw: "text-[11.5px] font-medium text-[#ffffff] truncate flex-1 min-w-0" }), K(`CPU ${Math.round(r.cpu)}%`, { tw: `text-[10.5px] font-semibold tabular-nums w-[52px] text-right shrink-0 text-[${r.cpu >= 65 ? wa(r.cpu) : "#ffffff"}]` }), K(`MEM ${Math.round(r.mp)}%`, { tw: "text-[10px] tabular-nums text-[#ffffff80] w-[54px] text-right shrink-0" }), K(Hi(yi(r)), { tw: "text-[10px] tabular-nums text-[#ffffff70] w-[42px] text-right shrink-0" }))];
+	}) : [G("Row", { tw: "px-2.5 py-2 w-full" }, K(e.configured ? H(n, "暂无在线主机", "No online servers") : H(n, "请在设置中连接 Beszel", "Connect Beszel in settings"), { tw: "text-[11px] text-[#ffffff80]" }))];
+	return u.expanded = G("Column", {
+		width: 420,
+		tw: "gap-2.5"
+	}, G("Row", { tw: "items-center gap-2 w-full" }, G("Row", { tw: `items-center gap-1.5 px-2 py-0.5 rounded-full shrink-0 ${i.down ? "bg-[#ef444428]" : "bg-[#3db86624]"}` }, Y(i.down ? q.red : q.green, 5), K(e.verdictText, { tw: `text-[10.5px] font-semibold tabular-nums ${i.down ? "text-[#fca5a5]" : "text-[#86efac]"}` })), G("Spacer"), G("ButtonBase", {
+		key: "notch-refresh",
+		label: H(n, "刷新", "Refresh"),
+		onClick: e.onRefresh,
+		tw: "w-6 h-6 rounded-md items-center justify-center cursor-pointer hover:bg-[#ffffff18]"
+	}, G("Icon", {
+		svg: sa("refresh"),
+		width: 13,
+		height: 13,
+		textColor: "#ffffffa0"
+	}))), G("Row", { tw: "items-stretch gap-2 w-full" }, io("nk-up", H(n, "在线", "Online"), `${i.up}/${i.total}`, i.down ? q.red : q.green, [], i.down ? q.red : "#ffffff"), io("nk-bw", H(n, "实时带宽", "Bandwidth"), W(i.totalBandwidthBytes, !0), q.emerald, f), io("nk-cpu", H(n, "平均 CPU", "Avg CPU"), i.up > 0 ? `${Math.round(i.avgCpu)}%` : "—", wa(i.avgCpu, q.blue), d, i.avgCpu >= 65 ? wa(i.avgCpu) : "#ffffff")), G("Column", { tw: "gap-1 w-full" }, G("Row", { tw: "items-center w-full px-0.5" }, K(a.length ? H(n, "当前异常", "Active Alerts") : H(n, "负载排行", "Top Servers"), { tw: `text-[10px] font-semibold ${a.length ? "text-[#eab308]" : "text-[#ffffff73]"}` }), G("Spacer"), K(s > 0 ? H(n, `${s} 项告警`, `${s} alerts`) : H(n, "全部正常", "All clear"), { tw: "text-[10px] tabular-nums text-[#ffffff66]" })), G("Column", { tw: "w-full rounded-[10px] bg-[#ffffff0a] border border-[#ffffff16] overflow-hidden" }, ...h))), u;
+}
+// src/ui/surfaces/tray.ts
+function oo(e) {
+	let { lang: t, systems: n, fleetSummary: r, configured: i, errorKind: a, trayFormat: o } = e;
+	if (!n.length) return i && !a ? "0" : "—";
+	if (r.down > 0 && o !== "cpu" && o !== "cpu_spark") return H(t, `${r.down} 离线`, `${r.down} down`);
+	if (o === "online") return `${r.up}/${r.total}`;
+	if (o === "cpu" || o === "cpu_spark") return r.up > 0 ? `CPU ${Math.round(r.avgCpu)}%` : `${r.up}/${r.total}`;
+	let s = W(r.totalBandwidthBytes, !0);
+	return r.totalBandwidthBytes > 0 ? `${r.up}/${r.total} · ${s}` : `${r.up}/${r.total}`;
+}
+function so(e, t) {
+	if (!e.caps.trayContent) return;
+	let { trayFormat: n, fleetHistory: r, systems: i, fleetSummary: a } = e;
+	if (n !== "rate_spark" && n !== "cpu_spark" || !i.length) return;
+	let o = n === "cpu_spark", s = r.slice(-24).map((e, t) => ({
+		x: t,
+		y: Math.round(o ? e.avgCpu : e.bandwidthBytes / 1024)
+	})), c = e.caps.trayContentIcon ? G("Icon", {
+		svg: ro,
+		width: 15,
+		height: 15,
+		fontSize: 15
+	}) : null, l = o ? a.up > 0 ? `${Math.round(a.avgCpu)}%` : t : a.down > 0 ? `${a.down}↓` : Hi(a.totalBandwidthBytes), u = s.length > 1 ? G("Chart", {
+		type: "line",
+		width: 36,
+		height: 18,
+		strokeWidth: 1.4,
+		series: [{
+			name: o ? "cpu" : "bw",
+			points: s
+		}]
+	}) : null;
+	return G("Row", {
+		width: Math.min(220, (c ? 20 : 0) + 46 + (u ? 40 : 0)),
+		height: 22,
+		gap: 4,
+		alignItems: "center"
+	}, c, G("Text", {
+		text: l,
+		fontSize: 12,
+		fontWeight: 500
+	}), u);
+}
+function co(e) {
+	let { lang: t, fleetSummary: n, configured: r, errorKind: i, errorMessage: a, stale: o } = e, s = oo(e), c = e.serverUrl ? [{
+		label: H(t, "打开 Beszel", "Open Beszel"),
+		onClick: e.onOpenBeszel
+	}] : [], l = n.total ? H(t, `Beszel · ${n.up}/${n.total} 在线${n.down ? `（${n.down} 离线）` : ""} · CPU ${Math.round(n.avgCpu)}% · ${W(n.totalBandwidthBytes, !0)}${o ? " · 已过期" : ""}`, `Beszel · ${n.up}/${n.total} up${n.down ? ` (${n.down} down)` : ""} · CPU ${Math.round(n.avgCpu)}% · ${W(n.totalBandwidthBytes, !0)}${o ? " · stale" : ""}`) : a || (r ? H(t, "Beszel · 暂无主机", "Beszel · no servers") : H(t, "Beszel · 未连接", "Beszel · not connected")), u = {
+		icon: "data:image/svg+xml," + encodeURIComponent(ro),
+		iconTemplate: !0,
+		error: i && i !== "config" ? a : o ? H(t, "数据已过期", "Data is stale") : "",
+		title: s,
+		tooltip: l,
+		...c.length ? { menu: c } : {}
+	}, d = so(e, s);
+	return d && (u.content = d), u;
+}
+// src/ui/surfaces/widgets.ts
+var lo = {
+	success: "success",
+	warning: "warning",
+	danger: "error",
+	accent: "accent",
+	muted: "secondary"
+}, uo = (e) => lo[e], fo = (e) => `${Math.round(e)}%`, Z = (e, t = {}) => G("Text", {
+	text: e,
+	maxLines: 1,
+	...t
+});
+function po(e, t, n = 8) {
+	return G("Row", {
+		gap: n,
+		alignItems: "center"
+	}, e, G("Spacer"), t);
+}
+function mo(e, t) {
+	return G("Row", {
+		gap: 6,
+		alignItems: "center"
+	}, G("Icon", {
+		svg: ro,
+		size: 14,
+		color: "primary"
+	}), Z(e, {
+		fontSize: 13,
+		fontWeight: 600
+	}), G("Spacer"), t ?? null);
+}
+function ho(e, t, n) {
+	return G("Column", { gap: 6 }, e, G("Spacer"), Z(t, {
+		fontSize: 13,
+		fontWeight: 600,
+		maxLines: 2
+	}), n ? Z(n, {
+		fontSize: 11,
+		color: "secondary",
+		maxLines: 3
+	}) : null, G("Spacer"));
+}
+function go(e, t) {
+	return G("Column", { gap: 4 }, po(Z(e, { fontSize: 12 }), Z(fo(t), {
+		fontSize: 12,
+		fontWeight: 600
+	}), 6), G("Progress", {
+		value: hi(t / 100, 0, 1),
+		color: uo(Bi(t))
+	}));
+}
+function _o(e, t) {
+	return G("Grid", {
+		columns: 3,
+		gap: 10
+	}, go("CPU", e.cpu), go(H(t, "内存", "MEM"), e.mp), go(H(t, "磁盘", "DISK"), e.dp));
+}
+function vo(e) {
+	let { systems: t, widgetSystem: n, selectedSystemId: r } = e, i = n.trim();
+	if (i) {
+		let e = t.find((e) => e.id === i);
+		if (e) return e;
+		let n = t.filter((e) => e.name.toLowerCase() === i.toLowerCase());
+		if (n.length === 1) return n[0];
+	}
+	return r && t.find((e) => e.id === r) || t[0];
+}
+function yo(e, t) {
+	let { lang: n } = e, r = vo(e), i = mo(r?.name || "Beszel", r ? Z(zi(r.status, n), {
+		fontSize: 11,
+		fontWeight: 600,
+		color: uo(Ri(r.status))
+	}) : null);
+	if (!r) return ho(i, H(n, "暂无主机", "No servers yet"));
+	let a = r.info;
+	if (r.status !== "up" || !a) return ho(i, zi(r.status, n), r.host || a?.h || "");
+	if (t === "small") return G("Column", { gap: 6 }, i, G("Spacer"), go("CPU", a.cpu), go(H(n, "内存", "MEM"), a.mp), go(H(n, "磁盘", "DISK"), a.dp));
+	let o = yi(a), s = _o(a, n);
+	if (t === "medium") return G("Column", { gap: 8 }, i, G("Spacer"), s, po(Z(Vi(a.u, n), {
+		fontSize: 11,
+		color: "secondary"
+	}), Z(o === null ? r.host || "" : W(o, !0), {
+		fontSize: 11,
+		color: "secondary"
+	})));
+	let c = e.detail?.id === r.id ? e.detail.points : [], l = (e) => c.map((t) => e(t.stats)).filter((e) => typeof e == "number" && Number.isFinite(e)).slice(-48), u = l((e) => e.cpu), d = l((e) => e.mp);
+	return G("Column", { gap: 10 }, i, s, e.caps.widgetChart && (u.length > 1 || d.length > 1) ? G("Chart", {
+		type: "line",
+		height: 86,
+		yDomain: [0, 100],
+		strokeWidth: 1.5,
+		series: [...u.length > 1 ? [{
+			color: q.blue,
+			points: u
+		}] : [], ...d.length > 1 ? [{
+			color: q.emerald,
+			points: d
+		}] : []]
+	}) : null, G("Divider"), po(Z(H(n, "运行", "Uptime"), {
+		fontSize: 11,
+		color: "secondary"
+	}), Z(Vi(a.u, n), { fontSize: 11 })), o === null ? null : po(Z(H(n, "网络", "Network"), {
+		fontSize: 11,
+		color: "secondary"
+	}), Z(W(o), { fontSize: 11 })), G("Spacer"));
+}
+function bo(e, t) {
+	let { lang: n, systems: r, attentionItems: i, inboxUnreadKeys: a, inboxAlerts: o } = e, s = i.length + a.size, c = mo("Beszel", t === "small" ? null : Z(s ? H(n, `${s} 项告警`, `${s} alerts`) : H(n, "全部正常", "All clear"), {
+		fontSize: 11,
+		fontWeight: 600,
+		color: s ? "warning" : "success"
+	}));
+	return s === 0 ? ho(c, H(n, "全部正常", "All clear"), H(n, `${r.length} 台主机运行平稳`, `${r.length} servers healthy`)) : t === "small" ? G("Column", { gap: 4 }, c, G("Spacer"), Z(String(s), {
+		fontSize: 30,
+		fontWeight: 700,
+		color: "error"
+	}), Z(i[0]?.title || o[0]?.title || "", {
+		fontSize: 11,
+		color: "secondary",
+		maxLines: 2
+	})) : G("Column", { gap: 8 }, c, ...[...i.map((e) => ({
+		title: e.title,
+		sub: e.detail,
+		critical: e.severity === "critical"
+	})), ...o.filter((e) => a.has(e.key)).map((e) => ({
+		title: e.title,
+		sub: e.systemName || e.source,
+		critical: e.severity === "critical"
+	}))].slice(0, t === "medium" ? 3 : 6).map((e) => po(Z(e.title, {
+		fontSize: 12,
+		fontWeight: 600,
+		color: e.critical ? "error" : "warning"
+	}), Z(e.sub, {
+		fontSize: 11,
+		color: "secondary"
+	}))), G("Spacer"));
+}
+function xo(e, t) {
+	let { lang: n, systems: r, fleetSummary: i } = e, a = uo(e.verdictTone), o = mo("Beszel", t === "small" || !r.length ? null : Z(e.verdictText, {
+		fontSize: 11,
+		fontWeight: 600,
+		color: a
+	}));
+	if (!e.configured) return ho(o, H(n, "未连接", "Not connected"), H(n, "在设置中填写地址与账号", "Enter server URL and account in settings"));
+	if (!r.length) return ho(o, e.verdictText);
+	if (t === "small") return G("Column", { gap: 4 }, o, G("Spacer"), G("Row", {
+		gap: 4,
+		alignItems: "end"
+	}, Z(String(i.up), {
+		fontSize: 30,
+		fontWeight: 700,
+		color: i.up === i.total ? "primary" : a
+	}), Z(`/ ${i.total} ${H(n, "在线", "up")}`, {
+		fontSize: 12,
+		color: "secondary"
+	})), Z(e.verdictText, {
+		fontSize: 11,
+		color: a,
+		maxLines: 2
+	}));
+	if (t === "medium") return G("Column", { gap: 7 }, o, G("Spacer"), ...r.slice(0, 4).map((e) => {
+		let t = e.info, r = e.status === "up" && t;
+		return po(Z(e.name, {
+			fontSize: 12,
+			fontWeight: 500,
+			color: r ? "primary" : uo(Ri(e.status))
+		}), r ? Z(`CPU ${fo(t.cpu)} · ${H(n, "内存", "MEM")} ${fo(t.mp)} · ${H(n, "磁盘", "DISK")} ${fo(t.dp)}`, {
+			fontSize: 11,
+			color: Math.max(t.cpu, t.mp, t.dp) >= 65 ? uo(Bi(Math.max(t.cpu, t.mp, t.dp))) : "secondary"
+		}) : Z(zi(e.status, n), {
+			fontSize: 11,
+			color: uo(Ri(e.status))
+		}));
+	}), G("Spacer"));
+	let s = e.fleetHistory.map((e) => e.avgCpu).slice(-32);
+	return G("Column", { gap: 8 }, o, e.caps.widgetChart && s.length > 1 ? G("Chart", {
+		type: "line",
+		height: 36,
+		yDomain: [0, 100],
+		strokeWidth: 1.5,
+		series: [{
+			color: q.blue,
+			points: s
+		}]
+	}) : null, ...r.slice(0, 5).flatMap((e, t) => {
+		let r = e.info, i = e.status === "up" && r;
+		return [t ? G("Divider") : null, G("Column", { gap: 4 }, po(Z(e.name, {
+			fontSize: 12,
+			fontWeight: 600
+		}), Z(i ? Vi(r.u, n) : zi(e.status, n), {
+			fontSize: 11,
+			color: i ? "secondary" : uo(Ri(e.status))
+		}), 6), i ? _o(r, n) : null)];
+	}), r.length > 5 ? Z(H(n, `另 ${r.length - 5} 台`, `${r.length - 5} more`), {
+		fontSize: 11,
+		color: "secondary"
+	}) : null, G("Spacer"));
+}
+function So(e, t) {
+	if (t) return;
+	let n = (t) => e.configured ? e.widgetMode === "system" ? yo(e, t) : e.widgetMode === "alerts" ? bo(e, t) : xo(e, t) : xo(e, t);
+	return {
+		small: n("small"),
+		medium: n("medium"),
+		large: n("large")
+	};
+}
+// src/index.ts
+var Co = 0, wo = !0, To = !1, Eo = null, Do = !1, Q = Ca(() => {
+	Co++, To = !1, Oo.reset(), ko.clear(), $.reset(), Ao.reset();
+}), Oo = Wr(() => ({
+	baseUrl: Q.serverUrl.value,
+	email: Q.credentialsRef.value.email,
+	password: Q.credentialsRef.value.password
+})), ko = qr(Oo, {
+	getConnectionKey: () => Q.connectionKey.value,
+	getActiveTarget: () => ({
+		id: Q.detailIdRef.value,
+		period: Q.historyPeriodRef.value
+	}),
+	hasSystem: (e) => Q.systemsRef.value.some((t) => t.id === e),
+	getLang: () => Q.lang.value,
+	getCurrentDetail: () => Q.detailRef.value,
+	setDetail: (e) => {
+		Q.detailRef.value = e;
+	},
+	setLoading: (e) => {
+		Q.detailLoadingRef.value = e;
+	},
+	onError: (e, t) => Q.setError(e, t)
+}), Ao = Xi({
+	canNotchActivity: () => Q.capsRef.value.notchActivity,
+	canNotchSetState: () => Q.capsRef.value.notchSetState,
+	setNotchActivity: (e) => {
+		Q.activeNotchActivityRef.value = e;
+	},
+	onNotificationClick: No
+}), $ = ia({
+	getLang: () => Q.lang.value,
+	getCaps: () => Q.capsRef.value,
+	syncInboxCaps: () => Q.syncCapabilities("inbox"),
+	getSystems: () => Q.systemsRef.value,
+	getAlerts: () => Q.inboxAlertsRef.value,
+	setAlerts: (e) => {
+		Q.inboxAlertsRef.value = e;
+	},
+	setBoundCount: (e) => {
+		Q.inboxBoundCountRef.value = e;
+	},
+	getReadKeys: () => Q.inboxReadKeysRef.value,
+	deleteReadKey: Q.deleteInboxReadKey,
+	getExpandedKey: () => Q.expandedInboxKeyRef.value,
+	setExpandedKey: (e) => {
+		Q.expandedInboxKeyRef.value = e;
+	},
+	getBusyMap: () => Q.inboxBusyRef.value,
+	setItemBusy: Q.setInboxItemBusy,
+	onNewAlert: (e) => Ao.processInboxAlert(e, Q.notifyEnabled.value, Q.lang.value)
+});
+function jo(e) {
+	Q.detailIdRef.value = e, ko.open(e, Q.historyPeriodRef.value);
+}
+function Mo(e) {
+	e.view && (Q.activeViewRef.value = e.view), e.systemId && (Q.activeViewRef.value = "systems", jo(e.systemId)), Ar();
+}
+function No(e) {
+	if (e.startsWith("beszel-sys-")) {
+		let t = e.slice(11).split(":")[0];
+		t && Mo({ systemId: t });
+	} else e.startsWith("beszel-inbox-") && Mo({ view: "alerts" });
+}
+async function Po() {
+	if (Q.refreshingRef.value) return;
+	let e = ++Co, t = Q.connectionKey.value;
+	if (Q.refreshingRef.value = !0, Q.setError(""), !Q.configured.value) Q.setError("config"), Q.refreshingRef.value = !1;
+	else try {
+		let [n, r] = await Promise.all([Oo.get("/api/collections/systems/records", {
+			perPage: 100,
+			skipTotal: 1,
+			sort: "name"
+		}), Oo.optionalGet("/api/collections/alerts/records", { items: [] }, {
+			perPage: 100,
+			skipTotal: 1,
+			fields: "id,system,name,triggered,value,min"
+		})]);
+		if (e !== Co || t !== Q.connectionKey.value) return;
+		let i = ki(n.items ?? [], "severity", !0), a = Date.now();
+		Q.systemsRef.value = i, Q.alertsRef.value = r.items ?? [], Q.updatedAtRef.value = a;
+		let o = Oi(i);
+		Q.fleetHistoryRef.value = [...Q.fleetHistoryRef.value.slice(-47), {
+			ts: a,
+			avgCpu: o.avgCpu,
+			bandwidthBytes: o.totalBandwidthBytes
+		}], Ao.processFleet(i, Q.threshold.value, Q.notifyEnabled.value, Q.lang.value);
+		let s = Q.syncOutputs(), c = Q.detailIdRef.value;
+		c && (!s.known || s.panel || Q.widgetMode.value === "system" && s.widget.families.length > 0) && c && ko.load(c, Q.historyPeriodRef.value, { silent: !0 }), $metrix.inbox && $.isStale(6e4) && $.refresh();
+	} catch (n) {
+		if (e !== Co || t !== Q.connectionKey.value) return;
+		let { kind: r, detail: i } = Vr(n);
+		Q.setError(r, i);
+	} finally {
+		e === Co && (Q.refreshingRef.value = !1);
+	}
+}
+var Fo = {
+	onRefresh: () => void Po(),
+	onOpenBeszel: (e) => {
+		let t = Q.serverUrl.value;
+		t && Mr(e ? `${t}/system/${encodeURIComponent(e)}` : t);
+	},
+	onSetView: (e) => {
+		Q.activeViewRef.value = e, e === "alerts" && $.isStale(15e3) && $.refresh();
+	},
+	onToggleLayout: () => {
+		Q.layoutOverrideRef.value = Q.currentLayout.value === "cards" ? "table" : "cards";
+	},
+	onSetSort: (e) => {
+		Q.sortKeyRef.value === e && e !== "severity" ? Q.sortDescRef.value = !Q.sortDescRef.value : (Q.sortKeyRef.value = e, Q.sortDescRef.value = e !== "name");
+	},
+	onSetSearch: (e) => {
+		Q.searchQueryRef.value = e;
+	},
+	onOpenDetail: jo,
+	onCloseDetail: () => {
+		ko.cancel(), Q.detailIdRef.value = null, Q.detailRef.value = null;
+	},
+	onSetMetric: (e) => {
+		Q.historyMetricRef.value = e;
+	},
+	onSetPeriod: (e) => {
+		Q.historyPeriodRef.value !== e && (Q.historyPeriodRef.value = e, Q.detailIdRef.value && ko.open(Q.detailIdRef.value, e));
+	},
+	onCopySummary: (e) => {
+		let t = Q.detailRef.value?.id === e.id ? Q.detailRef.value : null, n = `sys:${e.id}`;
+		Nr(Ki(e, t, Q.lang.value)).then((e) => {
+			e && (Q.copiedKeyRef.value = n, Eo && clearTimeout(Eo), Eo = setTimeout(() => {
+				Q.copiedKeyRef.value === n && (Q.copiedKeyRef.value = "");
+			}, 1800));
+		});
+	},
+	onRefreshInbox: () => void $.refresh(),
+	onToggleInboxExpand: (e) => {
+		let t = Q.expandedInboxKeyRef.value !== e.key;
+		Q.expandedInboxKeyRef.value = t ? e.key : null, t && (Q.markInboxRead(e.key), $.loadBody(e));
+	},
+	onDeleteInbox: (e) => void $.remove(e)
+}, Io = V(() => no(Q.panelState.value, Fo)), Lo = V(() => ({
+	...Q.surfaceData.value,
+	onRefresh: Fo.onRefresh,
+	onOpenBeszel: () => Fo.onOpenBeszel(),
+	onOpenSystem: (e) => Mo({ systemId: e })
+})), Ro = V(() => co(Lo.value)), zo = V(() => ao(Lo.value, Q.demandRef.value.notch)), Bo = V(() => {
+	let e = Q.demandRef.value;
+	return So(Lo.value, e.widget.known && e.widget.families.length === 0);
+});
+function Vo() {
+	Do || (Do = !0, Q.watchInvalidation(Er));
+}
+async function Ho(e) {
+	Q.syncEnv(e), Q.syncOutputs(), Vo(), Dr(Q.refreshIntervalMs.value), To ||= (await Q.syncCapabilities("all"), !0), await Po();
+}
+function Uo(e) {
+	Q.syncEnv(e);
+	let t = Q.syncOutputs();
+	Vo();
+	let n = { panel: Io.value };
+	(!t.known || t.tray) && (n.tray = Ro.value);
+	let r = Bo.value;
+	if (r && (n.widget = r), t.notch) {
+		let e = zo.value;
+		e && (n.notch = e);
+	}
+	return n;
+}
+function Wo(e, t) {
+	if (Vo(), e === "lifecycle" && t?.type === "expand") Date.now() - Q.updatedAtRef.value > Math.max(2e4, Q.refreshIntervalMs.value) && Po();
+	else if (e === "outputs") {
+		let e = Q.syncOutputs();
+		Q.syncCapabilities("all").then((e) => {
+			To = !0, e.inboxBoxes && $.isStale(6e4) && $.refresh();
+		}), (e.panel || e.notch === "expanded") && Q.configured.value && !Q.refreshingRef.value && Date.now() - Q.updatedAtRef.value > 2e4 && Po();
+	} else if (e === "subscription") Q.syncSubscription(), Q.syncCapabilities("all").then((e) => {
+		To = !0, e.inboxBoxes && $.refresh();
+	});
+	else if (e === "system" && t) {
+		if (t.type === "network.change") {
+			let e = !wo;
+			wo = t.online !== !1, wo && Q.configured.value && (e || Date.now() - Q.updatedAtRef.value > 1e4) && Po();
+			return;
+		}
+		t.type === "notification.click" && No(t.tag || t.id || "");
+	} else e === "inboxchange" && $.refresh(Array.isArray(t?.inboxIds) ? t.inboxIds : void 0);
+}
+var Go = {
+	scheduled: Ho,
+	render: Uo,
+	event: Wo
+};
+export { Go as default, Wo as event, Uo as render, Ho as scheduled };
+]]></script>
+</bar>

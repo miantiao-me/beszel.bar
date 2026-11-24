@@ -1,0 +1,29 @@
+{
+  "name": "beszel-bar",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Monitor self-hosted Beszel servers, containers, and alerts in Metrix.Bar.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vp build --watch",
+    "build": "vp build",
+    "check": "vp check",
+    "test": "vp test"
+  },
+  "dependencies": {
+    "destr": "^2.0.5",
+    "es-toolkit": "1.53.1",
+    "pretty-bytes": "7.2.0",
+    "ufo": "1.6.4",
+    "vue": "^3.5.46"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "vite-plus": "1.6.0"
+  },
+  "engines": {
+    "node": "^24.22.2"
+  },
+  "packageManager": "pnpm@12.21.0"
+}
