@@ -56,6 +56,7 @@ declare const $metrix: {
   outputs?: () => MetrixOutputDemand;
   subscription?: () => "free" | "plus";
   caniuse?: (name: string) => Promise<boolean>;
+  system(command: "app.locale"): Promise<string>;
   readonly panel?: {
     open(): Promise<MetrixPanelState>;
     close(): Promise<MetrixPanelState>;

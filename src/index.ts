@@ -7,6 +7,7 @@ import type { AlertRecord, SystemRecord } from "./beszel/types.ts";
 import { createAlertMonitor } from "./domain/alerts.ts";
 import {
   copyToClipboard,
+  initLanguage,
   invalidateHost,
   openHostPanel,
   openHostUrl,
@@ -292,10 +293,11 @@ export function render(env: Env): View {
   return view;
 }
 
-export function event(
+export async function event(
   name: string,
   payload?: { type?: string; online?: boolean; tag?: string; id?: string; inboxIds?: string[] },
-): void {
+): Promise<void> {
+  if (name === "lifecycle" && payload?.type === "start") await initLanguage();
   connectReactiveOutputs();
   if (name === "lifecycle" && payload?.type === "expand") {
     if (Date.now() - store.updatedAtRef.value > Math.max(20_000, store.refreshIntervalMs.value)) {

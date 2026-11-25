@@ -1,6 +1,6 @@
 import { h as vueH, type VNode } from "vue";
 import { t, type Lang } from "../host/bridge.ts";
-import { ICON_BODIES, type IconName } from "./icons.ts";
+import { ICON_NAMES, type IconName } from "./icons.ts";
 
 export type { IconName, VNode };
 export type Tone = "success" | "warning" | "danger" | "accent" | "muted";
@@ -29,15 +29,9 @@ export function T(text: string, props: Record<string, unknown> = {}): VNode {
   return h("Text", { text, ...props });
 }
 
-const SVG_OPEN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">';
-
-export function iconSvg(name: IconName): string {
-  return SVG_OPEN + ICON_BODIES[name] + "</svg>";
-}
-
 export function Icon(name: IconName, size = 14, color?: string): VNode {
   return h("Icon", {
-    svg: iconSvg(name),
+    name: ICON_NAMES[name],
     width: size,
     height: size,
     ...(color ? { textColor: color } : {}),

@@ -3,9 +3,10 @@ import { formatRate, levelTone, statusTone, statusWord, uptime } from "../../bes
 import { systemBandwidthBytes } from "../../beszel/metrics.ts";
 import type { SystemRecord } from "../../beszel/types.ts";
 import { t, type Lang } from "../../host/bridge.ts";
+import { SERVER_SVG } from "../icons.ts";
 import { h, type Tone, type VNode } from "../kit.ts";
 import { PAL } from "../theme.ts";
-import { MARK, type SurfaceContext } from "./types.ts";
+import type { SurfaceContext } from "./types.ts";
 
 type Family = "small" | "medium" | "large";
 type WidgetColor = "primary" | "secondary" | "accent" | "success" | "warning" | "error";
@@ -31,7 +32,7 @@ function wHeader(title: string, trailing?: VNode | null): VNode {
   return h(
     "Row",
     { gap: 6, alignItems: "center" },
-    h("Icon", { svg: MARK, size: 14, color: "primary" }),
+    h("Icon", { svg: SERVER_SVG, size: 14, color: "primary" }),
     wText(title, { fontSize: 13, fontWeight: 600 }),
     h("Spacer"),
     trailing ?? null,

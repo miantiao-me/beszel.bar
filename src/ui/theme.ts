@@ -1,5 +1,6 @@
 import { clamp } from "es-toolkit";
-import { h, iconSvg, T, type Child, type IconName, type Tone, type VNode } from "./kit.ts";
+import { ICON_NAMES } from "./icons.ts";
+import { h, T, type Child, type IconName, type Tone, type VNode } from "./kit.ts";
 
 /** Aligned with henrygd/beszel internal/site/src/index.css & systems-table-columns.tsx. */
 export const PAL = {
@@ -107,7 +108,7 @@ export function ghostIconButton(
       ...(options.disabled ? {} : { onClick }),
     },
     h("Icon", {
-      svg: iconSvg(name),
+      name: ICON_NAMES[name],
       width: iconSize,
       height: iconSize,
       textColor: options.color ?? (options.active ? "text" : "textMuted"),

@@ -11,9 +11,7 @@ import type {
 } from "../../beszel/types.ts";
 import type { Capabilities, Lang } from "../../host/bridge.ts";
 import type { InboxAlert } from "../../inbox/parser.ts";
-import { iconSvg, type Tone, type VNode } from "../kit.ts";
-
-export const MARK = iconSvg("server");
+import type { Tone, VNode } from "../kit.ts";
 
 export interface View {
   tray?: Record<string, unknown>;

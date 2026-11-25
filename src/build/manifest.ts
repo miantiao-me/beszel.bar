@@ -66,11 +66,6 @@ function cdata(value: string): string {
   return value.replaceAll("]]>", "]]]]><![CDATA[>");
 }
 
-export function iconDataUri(svgBody: string, color = "currentColor"): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${svgBody.replaceAll("currentColor", color)}</svg>`;
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-}
-
 export function renderBar(manifest: BarManifest, script: string): string {
   const attributes: [string, string | undefined][] = [
     ["protocol-version", "0"],
@@ -191,7 +186,7 @@ export const languageInput: BarInput = {
   zh: { label: "语言" },
   default: "auto",
   options: [
-    { value: "auto", label: "Auto (System)", zh: "跟随系统" },
+    { value: "auto", label: "Follow Metrix.Bar", zh: "跟随 Metrix.Bar" },
     { value: "en", label: "English" },
     { value: "zh", label: "简体中文" },
   ],

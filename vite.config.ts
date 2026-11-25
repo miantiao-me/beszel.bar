@@ -1,30 +1,17 @@
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite-plus";
 import manifest from "./manifest.ts";
 import { renderBar } from "./src/build/manifest.ts";
 
-const noticesPath = fileURLToPath(new URL("./THIRD_PARTY_NOTICES.txt", import.meta.url));
-
 function barArtifact(): Plugin {
   return {
     name: "bar-artifact",
-    buildStart() {
-      this.addWatchFile(noticesPath);
-    },
     generateBundle(_options, bundle) {
       const chunks = Object.values(bundle).filter((item) => item.type === "chunk");
       const entry = chunks[0];
       if (chunks.length !== 1 || !entry?.isEntry) {
         this.error("Build the dashboard as one Worker chunk.");
       }
-      const notices = readFileSync(noticesPath, "utf8").replaceAll("*/", "* /");
-      const source = renderBar(
-        manifest,
-        `/*!
-${notices}*/
-${entry.code}`,
-      );
+      const source = renderBar(manifest, entry.code);
       delete bundle[entry.fileName];
       this.emitFile({ type: "asset", fileName: `${manifest.id}.bar`, source });
     },
@@ -33,15 +20,21 @@ ${entry.code}`,
 
 export default defineConfig({
   plugins: [barArtifact()],
-  define: {
-    "process.env.NODE_ENV": '"production"',
-    __VUE_OPTIONS_API__: "false",
-    __VUE_PROD_DEVTOOLS__: "false",
-    __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: "false",
-  },
   build: {
     target: "es2022",
-    minify: true,
+    minify: false,
+    rolldownOptions: {
+      external: ["destr", "es-toolkit", "pretty-bytes", "ufo", "vue"],
+      output: {
+        paths: {
+          destr: "https://esm.sh/destr@2.0.5",
+          "es-toolkit": "https://esm.sh/es-toolkit@1.53.1?bundle&target=es2022",
+          "pretty-bytes": "https://esm.sh/pretty-bytes@7.2.0",
+          ufo: "https://esm.sh/ufo@1.6.4",
+          vue: "https://esm.sh/vue@3.5.46?bundle&target=es2022",
+        },
+      },
+    },
     lib: { entry: "src/index.ts", formats: ["es"], fileName: "worker" },
   },
   fmt: { ignorePatterns: ["dist/**", "AGENTS.md", "LICENSE", "THIRD_PARTY_NOTICES.txt"] },

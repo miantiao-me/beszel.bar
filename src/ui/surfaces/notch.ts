@@ -2,9 +2,10 @@ import { orderBy } from "es-toolkit";
 import { formatRate, formatShortRate } from "../../beszel/format.ts";
 import { systemBandwidthBytes } from "../../beszel/metrics.ts";
 import { t } from "../../host/bridge.ts";
-import { h, iconSvg, T, type VNode } from "../kit.ts";
+import { ICON_NAMES } from "../icons.ts";
+import { h, Icon, T, type VNode } from "../kit.ts";
 import { metricHex, PAL, statusDot } from "../theme.ts";
-import { MARK, type SurfaceContext } from "./types.ts";
+import type { SurfaceContext } from "./types.ts";
 
 function notchKpi(
   key: string,
@@ -50,7 +51,7 @@ export function buildNotch(
   const { lang, systems, fleetSummary: summary, attentionItems: attn, inboxUnreadKeys } = ctx;
   const totalAttn = attn.length + inboxUnreadKeys.size;
   const leading = h("Icon", {
-    svg: MARK,
+    name: ICON_NAMES.server,
     width: 14,
     height: 14,
     fontSize: 14,
@@ -76,7 +77,13 @@ export function buildNotch(
         textColor: summary.down > 0 ? PAL.red : "#ffffff",
       }),
     },
-    minimal: h("Icon", { svg: MARK, width: 13, height: 13, fontSize: 13, textColor: "#ffffff" }),
+    minimal: h("Icon", {
+      name: ICON_NAMES.server,
+      width: 13,
+      height: 13,
+      fontSize: 13,
+      textColor: "#ffffff",
+    }),
   };
 
   if (
@@ -192,7 +199,7 @@ export function buildNotch(
           onClick: ctx.onRefresh,
           tw: "w-6 h-6 rounded-md items-center justify-center cursor-pointer hover:bg-[#ffffff18]",
         },
-        h("Icon", { svg: iconSvg("refresh"), width: 13, height: 13, textColor: "#ffffffa0" }),
+        Icon("refresh", 13, "#ffffffa0"),
       ),
     ),
     h(

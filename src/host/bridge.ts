@@ -1,4 +1,5 @@
 import { destr } from "destr";
+import { ref } from "vue";
 
 export type Lang = "zh" | "en";
 
@@ -65,19 +66,18 @@ const CAP_MAP: [keyof Capabilities, string][] = [
 
 const INBOX_CAP_MAP = CAP_MAP.filter(([key]) => key.startsWith("inbox"));
 
-export function langOf(env: Env | null | undefined): Lang {
-  const value = env?.inputs.lang;
-  if (value === "zh" || value === "en") return value;
-  const nav = globalThis.navigator as
-    | { languages?: readonly string[]; language?: string }
-    | undefined;
-  const tags = nav?.languages?.length ? nav.languages : nav?.language ? [nav.language] : [];
-  for (const tag of tags) {
-    const lower = String(tag).toLowerCase();
-    if (lower.startsWith("zh")) return "zh";
-    if (lower.startsWith("en")) return "en";
+const appLanguage = ref<Lang>("en");
+
+export async function initLanguage(): Promise<void> {
+  if (await $metrix.caniuse?.("app.locale")) {
+    const locale = await $metrix.system("app.locale");
+    appLanguage.value = /^zh(?:$|-(?:hans|cn|sg)(?:-|$))/i.test(locale) ? "zh" : "en";
   }
-  return "en";
+}
+
+export function langOf(env: Env | null | undefined): Lang {
+  const language = env?.inputs.lang;
+  return language === "zh" || language === "en" ? language : appLanguage.value;
 }
 
 export function t(lang: Lang, zh: string, en: string): string {

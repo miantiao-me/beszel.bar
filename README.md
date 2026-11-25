@@ -41,18 +41,18 @@ generic://agili-inbox.com/h/<inbox-id>/<secret>
 
 ## Settings
 
-| Setting              | Default                 | What it controls                                                  |
-| -------------------- | ----------------------- | ----------------------------------------------------------------- |
-| **Language**         | Follow system           | Display language (`Auto`, `English`, `简体中文`)                  |
-| **Server URL**       | `http://127.0.0.1:8090` | Your Beszel address (local HTTP supported)                        |
-| **Email / Password** | _Required_              | Beszel login credentials (stored in OS Keychain)                  |
-| **Refresh Interval** | `30s`                   | How often data refreshes (`15s`, `30s`, `60s`)                    |
-| **Menu Bar**         | Online (`4/5`)          | Menu bar display (`Online`, `Bandwidth`, `CPU`, macOS sparklines) |
-| **Notch Metric**     | Online (`4/5`)          | Metric shown in the screen notch (Plus)                           |
-| **Desktop Widget**   | Overview                | Widget mode (`Overview`, `Single Server`, `Alerts`)               |
-| **Widget Server**    | _Blank_                 | Specific server ID or name for Single Server widget               |
-| **Notifications**    | Off                     | Desktop alerts on outage, high load, or new alert messages        |
-| **Alert Threshold**  | `90%`                   | Resource threshold for warnings (`0` disables)                    |
+| Setting              | Default                 | What it controls                                                                         |
+| -------------------- | ----------------------- | ---------------------------------------------------------------------------------------- |
+| **Language**         | Follow Metrix.Bar       | Follow the app, English, or Simplified Chinese. Restart after changing the app language. |
+| **Server URL**       | `http://127.0.0.1:8090` | Your Beszel address (local HTTP supported)                                               |
+| **Email / Password** | _Required_              | Beszel login credentials (stored in OS Keychain)                                         |
+| **Refresh Interval** | `30s`                   | How often data refreshes (`15s`, `30s`, `60s`)                                           |
+| **Menu Bar**         | Online (`4/5`)          | Menu bar display (`Online`, `Bandwidth`, `CPU`, macOS sparklines)                        |
+| **Notch Metric**     | Online (`4/5`)          | Metric shown in the screen notch (Plus)                                                  |
+| **Desktop Widget**   | Overview                | Widget mode (`Overview`, `Single Server`, `Alerts`)                                      |
+| **Widget Server**    | _Blank_                 | Specific server ID or name for Single Server widget                                      |
+| **Notifications**    | Off                     | Desktop alerts on outage, high load, or new alert messages                               |
+| **Alert Threshold**  | `90%`                   | Resource threshold for warnings (`0` disables)                                           |
 
 ## Permissions
 

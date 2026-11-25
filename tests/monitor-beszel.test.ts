@@ -446,7 +446,7 @@ test("supports reactive updates, search, cards/table toggle, simplified tray, an
   const trayMenu = (rendered.tray?.menu as { label?: string }[] | undefined) ?? [];
   assert.equal(rendered.tray?.title, "7/7");
   assert.equal(rendered.tray?.iconTemplate, true);
-  assert.match(String(rendered.tray?.icon), /M3%207a3%203/);
+  assert.equal(rendered.tray?.icon, "tabler:server");
   assert.deepEqual(
     trayMenu.map((item) => item.label),
     ["打开 Beszel"],

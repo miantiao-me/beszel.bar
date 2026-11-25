@@ -1,5 +1,5 @@
-import { iconDataUri, languageInput, type BarManifest } from "./src/build/manifest.ts";
-import { ICON_BODIES } from "./src/ui/icons.ts";
+import { languageInput, type BarManifest } from "./src/build/manifest.ts";
+import { ICON_NAMES } from "./src/ui/icons.ts";
 
 const manifest: BarManifest = {
   id: "beszel",
@@ -13,7 +13,7 @@ const manifest: BarManifest = {
       description: "监控自建 Beszel 主机、容器与告警。",
     },
   },
-  icon: iconDataUri(ICON_BODIES.server, "currentColor"),
+  icon: ICON_NAMES.server,
   category: "monitor",
   refresh: "1m",
   material: "solid",
@@ -24,7 +24,7 @@ const manifest: BarManifest = {
   homepage: "https://github.com/miantiao-me/beszel.bar",
   license: "Apache-2.0",
   permissions: {
-    network: [{ origin: "{{ inputs.server }}", fromUrl: true, allowHttp: true }],
+    network: [{ origin: "{{ inputs.server }}", fromUrl: true, allowHttp: true }, "https://esm.sh"],
     inbox: "manage",
   },
   inputs: [
@@ -144,7 +144,7 @@ const manifest: BarManifest = {
       zh: { label: "告警阈值 %", help: "资源达到该百分比时提醒，0 为关闭。" },
     },
   ],
-  apis: ["intl", "shell", "localStorage", "notification", "clipboard", "match-media"],
+  apis: ["app", "intl", "shell", "localStorage", "notification", "clipboard", "match-media"],
   docs: `Monitor your self-hosted Beszel servers in read-only mode.
 
 Quick Start

@@ -1,7 +1,8 @@
 import { formatRate, formatShortRate } from "../../beszel/format.ts";
 import { t } from "../../host/bridge.ts";
+import { ICON_NAMES, SERVER_SVG } from "../icons.ts";
 import { h, type VNode } from "../kit.ts";
-import { MARK, type SurfaceContext } from "./types.ts";
+import type { SurfaceContext } from "./types.ts";
 
 interface TrayItem {
   label?: string;
@@ -39,7 +40,7 @@ function buildTrayContent(ctx: SurfaceContext, fallbackTitle: string): VNode | u
     y: isCpu ? Math.round(sample.avgCpu) : Math.round(sample.bandwidthBytes / 1024),
   }));
   const icon = ctx.caps.trayContentIcon
-    ? h("Icon", { svg: MARK, width: 15, height: 15, fontSize: 15 })
+    ? h("Icon", { svg: SERVER_SVG, width: 15, height: 15, fontSize: 15 })
     : null;
   const label = isCpu
     ? summary.up > 0
@@ -87,7 +88,7 @@ export function buildTray(ctx: SurfaceContext): Record<string, unknown> {
         : t(lang, "Beszel · 未连接", "Beszel · not connected"));
 
   const tray: Record<string, unknown> = {
-    icon: "data:image/svg+xml," + encodeURIComponent(MARK),
+    icon: ICON_NAMES.server,
     iconTemplate: true,
     error:
       errorKind && errorKind !== "config"
